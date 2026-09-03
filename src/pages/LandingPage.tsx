@@ -30,6 +30,10 @@ export function LandingPage() {
 
   return (
     <main className="page landing-page landing-v2">
+      <button className="landing-winners-link" onClick={() => navigate('/albo-vincitori')}>
+        Albo vincitori
+      </button>
+
       <button className="landing-admin-link" onClick={() => navigate('/admin')}>
         Admin
       </button>

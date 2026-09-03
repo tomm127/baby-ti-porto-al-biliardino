@@ -2648,3 +2648,212 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB ADMIN START RESET V1 END */
+
+/* BTPB WINNERS PAGE V1 START */
+
+.landing-v2 .landing-winners-link {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 16px;
+  z-index: 30;
+  border: 1px solid var(--l-line);
+  border-radius: 999px;
+  background: rgba(255,253,250,.92);
+  color: var(--l-muted);
+  padding: 8px 11px;
+  font-size: 11px;
+  font-weight: 850;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(25,31,36,.03);
+}
+
+.landing-v2 .landing-winners-link:hover {
+  color: var(--l-ink);
+  background: #fffdfa;
+}
+
+.winners-page {
+  min-height: 100vh;
+  padding: 18px 14px 40px;
+  background: #f4f1ea;
+  color: #18283a;
+}
+
+.winners-shell {
+  width: min(920px, 100%);
+  margin: 0 auto;
+}
+
+.winners-header {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border-bottom: 1px solid #cbc6bb;
+}
+
+.winners-back {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d9d4c9;
+  border-radius: 13px;
+  background: #fffdfa;
+  color: #18283a;
+  font-size: 22px;
+}
+
+.winners-header > div {
+  min-width: 0;
+}
+
+.winners-header span {
+  color: #68727a;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+
+.winners-header h1 {
+  margin: 2px 0 0;
+  color: #18283a;
+  font-size: clamp(32px, 7vw, 48px);
+  line-height: .95;
+  letter-spacing: -.05em;
+}
+
+.winners-intro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+  padding: 18px;
+  border: 1px solid #d9d4c9;
+  border-radius: 19px;
+  background: #fffdfa;
+}
+
+.winners-intro img {
+  width: 74px;
+  height: 74px;
+  object-fit: cover;
+  border-radius: 16px;
+  flex: none;
+}
+
+.winners-intro strong {
+  color: #18283a;
+  font-size: 20px;
+}
+
+.winners-intro p {
+  margin: 5px 0 0;
+  color: #68727a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.winners-year {
+  padding: 18px;
+  border: 1px solid #d9d4c9;
+  border-top: 4px solid #ceb57b;
+  border-radius: 20px;
+  background: #fffdfa;
+}
+
+.winners-year-title span {
+  color: #6b8f8a;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .13em;
+}
+
+.winners-year-title h2 {
+  margin: 3px 0 18px;
+  color: #18283a;
+  font-size: 31px;
+  letter-spacing: -.04em;
+}
+
+.winners-category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
+}
+
+.winner-placeholder-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #ddd8cd;
+  border-radius: 16px;
+  background: #f8f5ee;
+}
+
+.winner-photo-placeholder {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, #e8e3d9 25%, #f0ece4 25%, #f0ece4 50%, #e8e3d9 50%, #e8e3d9 75%, #f0ece4 75%);
+  background-size: 28px 28px;
+  color: #8c918e;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .13em;
+}
+
+.winner-placeholder-card > div:last-child {
+  padding: 14px;
+}
+
+.winner-placeholder-card span {
+  color: #6c7378;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.winner-placeholder-card h3 {
+  margin: 4px 0;
+  color: #18283a;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+
+.winner-placeholder-card p {
+  margin: 0;
+  color: #747a7e;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.winners-coming-soon {
+  margin: 16px 3px 0;
+  color: #7b8083;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 680px) {
+  .landing-v2 .landing-winners-link {
+    left: 11px;
+  }
+
+  .winners-category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .winner-placeholder-card {
+    display: grid;
+    grid-template-columns: 120px minmax(0,1fr);
+  }
+
+  .winner-photo-placeholder {
+    aspect-ratio: auto;
+    min-height: 120px;
+  }
+}
+
+/* BTPB WINNERS PAGE V1 END */
