@@ -307,18 +307,13 @@ button { cursor:pointer; }
   .field-add-row { grid-template-columns:1fr; }
 }
 
-/* Step 9: connectivity + resilient offline reading */
-.status-dot.offline { background:#e6a000; }
-.connection-banner { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:12px; margin:0 0 14px; font-size:12px; line-height:1.35; }
-.connection-banner strong { flex:none; }
-.connection-banner span { opacity:.78; }
-.connection-banner.offline { background:#fff1d6; color:#664700; border:1px solid #f0d597; }
-.connection-banner.stale { background:#eef3ff; color:#29446f; border:1px solid #d8e3fa; }
-.match-screen>.connection-banner { position:fixed; top:10px; left:50%; transform:translateX(-50%); width:min(620px,calc(100% - 24px)); z-index:20; box-shadow:0 8px 24px rgba(0,0,0,.22); }
-.offline-match-note { width:min(620px,100%); margin:18px auto 0; padding:12px 14px; border:1px solid #594b2b; border-radius:12px; background:#2b261b; color:#f1db9a; text-align:center; font-size:13px; line-height:1.45; }
-.screen-mode>.connection-banner { background:#3a2f17; color:#ffe7a5; border-color:#58481f; }
-button:disabled { cursor:not-allowed; }
 
-@media (max-width:620px) {
-  .connection-banner { align-items:flex-start; flex-direction:column; gap:2px; }
-}
+/* Step 9.2: in-app match end confirmation */
+.end-match-confirm { margin-top:18px; text-align:center; }
+.end-match-confirm p { margin:0; color:#aaa; line-height:1.45; }
+.confirm-result .end-confirm-button { background:#fff; color:#111; }
+.admin-inline-confirm { margin-top:12px; padding:14px; border:1px solid #e2d5d1; border-radius:12px; background:#fff6f4; display:grid; gap:7px; }
+.admin-inline-confirm>span { color:#73534d; font-size:12px; line-height:1.4; }
+.admin-inline-confirm>div { display:flex; gap:7px; flex-wrap:wrap; }
+.admin-inline-confirm button { border:1px solid #ddd; background:#fff; border-radius:9px; padding:8px 10px; font-size:12px; font-weight:750; }
+.admin-inline-confirm button.danger-soft { background:#2c1816; color:#fff; border-color:#55302b; }

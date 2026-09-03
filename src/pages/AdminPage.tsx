@@ -216,6 +216,7 @@ function LiveAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 
 function AdminFieldCard({ fieldName, match, bundle, busy, act }: { fieldName: string; match?: MatchRow; bundle: TournamentBundle; busy: string; act: (k:string, fn:()=>Promise<unknown>)=>Promise<void> }) {
   const [, setTick] = useState(Date.now());
+  const [confirmEnd, setConfirmEnd] = useState(false);
   useEffect(() => { const id = window.setInterval(() => setTick(Date.now()), 500); return () => window.clearInterval(id); }, []);
   if (!match) return <section className="field-card field-free"><div className="panel-title"><strong>{fieldName}</strong><span>LIBERO</span></div><div className="field-empty">Campo disponibile</div></section>;
   const liveMatch = match;
@@ -226,11 +227,12 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act }: { fieldName: st
   return <section className="field-card"><div className="panel-title"><strong>{fieldName}</strong><span>{liveMatch.status.replace('_',' ')}</span></div><div className="field-match"><strong>{t1}</strong><small>VS</small><strong>{t2}</strong></div><div className="big-timer">{liveMatch.duration_seconds == null ? '∞' : formatClock(remaining)}</div><div className="actions field-actions">
     {['called','ready'].includes(liveMatch.status) && <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => startMatch(liveMatch.id))}>Avvia</button>}
     {liveMatch.status === 'playing' && liveMatch.pause_allowed && (liveMatch.paused_at ? <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => resumeMatch(liveMatch.id))}>Riprendi</button> : <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => pauseMatch(liveMatch.id))}>Pausa</button>)}
-    {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id} onClick={() => { if (window.confirm('Sei sicuro di voler concludere la partita?\n\nLa partita verrà chiusa e si passerà all’inserimento del risultato.')) void act(liveMatch.id, () => endMatchEarly(liveMatch.id)); }}>Termina</button>}
+    {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina</button>}
     {liveMatch.status === 'awaiting_result' && <span className="awaiting-chip">Attesa risultato</span>}
     {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button disabled={busy.includes(liveMatch.id)} onClick={() => void act(`post-${liveMatch.id}`,()=>adminPostponeMatch(liveMatch.id))}>Rimanda</button>}
     {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button className="danger-soft" disabled={busy.includes(liveMatch.id)} onClick={cancel}>Annulla</button>}
   </div>
+  {confirmEnd && liveMatch.status === 'playing' && <div className="admin-inline-confirm"><strong>Concludere la partita?</strong><span>La partita verrà chiusa e passerà all’inserimento del risultato.</span><div><button disabled={busy===liveMatch.id} onClick={() => setConfirmEnd(false)}>Continua</button><button className="danger-soft" disabled={busy===liveMatch.id} onClick={() => { setConfirmEnd(false); void act(liveMatch.id, () => endMatchEarly(liveMatch.id)); }}>Concludi partita</button></div></div>}
   {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <div className="forfeit-row"><span>Tavolino:</span><button onClick={()=>forfeit(liveMatch.team1_id,t1)}>perde {t1}</button><button onClick={()=>forfeit(liveMatch.team2_id,t2)}>perde {t2}</button></div>}
   </section>;
 }
