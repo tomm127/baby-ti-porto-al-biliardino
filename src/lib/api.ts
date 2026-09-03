@@ -574,6 +574,18 @@ export async function adminStartTournament(tournamentId: string) {
   return Number(data ?? 0);
 }
 
+export async function adminResetTournamentMatches(tournamentId: string) {
+  const { error } = await client().rpc('admin_reset_tournament_matches', {
+    p_tournament_id: tournamentId,
+  });
+  if (error) throw error;
+
+  // The reset RPC deliberately leaves the tournament empty and in draft.
+  // Rebuild the group schedule as SCHEDULED matches. They remain unassigned
+  // until the admin explicitly presses INIZIA TORNEO.
+  return regenerateGroupSchedule(tournamentId);
+}
+
 export async function adminUpdateMatchResult(matchId: string, scoreTeam1: number, scoreTeam2: number) {
   const { data, error } = await client().rpc('admin_update_match_result', {
     p_match_id: matchId,

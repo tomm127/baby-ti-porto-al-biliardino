@@ -2505,3 +2505,146 @@ button:disabled { cursor:not-allowed; }
   }
 }
 /* BTPB ADMIN LIGHT V1 END */
+
+/* BTPB ADMIN START RESET V1 START */
+
+.admin-v2 .settings-tournament-control-card {
+  margin-top: 0;
+  border-top: 3px solid #89929a;
+}
+
+.admin-v2 .settings-tournament-control-copy {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  max-width: 760px;
+}
+
+.admin-v2 .settings-tournament-control-copy strong {
+  color: var(--a-ink, #1b2a3b);
+  font-size: 18px;
+}
+
+.admin-v2 .settings-tournament-control-copy p {
+  margin: 0;
+  color: var(--a-muted, #6c7378);
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.admin-v2 .settings-tournament-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.admin-v2 .settings-start-button {
+  min-width: 190px;
+  background: var(--a-ink, #1b2a3b) !important;
+  color: #fff !important;
+  border: 1px solid var(--a-ink, #1b2a3b) !important;
+}
+
+.admin-v2 .settings-reset-button {
+  background: transparent !important;
+  color: #8b4942 !important;
+  border: 1px solid #d9bcb7 !important;
+}
+
+.admin-v2 .settings-reset-button:hover {
+  background: #f5e9e7 !important;
+}
+
+.admin-v2 .settings-status-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 7px 10px;
+  border: 1px solid var(--a-line, #d8d4ca);
+  border-radius: 999px;
+  background: var(--a-surface-2, #f7f5f0);
+  color: var(--a-muted, #6c7378);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-v2 .settings-reset-confirm {
+  margin-top: 14px;
+  padding: 15px;
+  border: 1px solid #ddc4bf;
+  border-radius: 13px;
+  background: #f7ecea;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-v2 .settings-reset-confirm strong {
+  color: #733e38;
+}
+
+.admin-v2 .settings-reset-confirm p {
+  margin: 0;
+  color: #805a55;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.admin-v2 .settings-reset-confirm > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-v2 .settings-reset-confirm button {
+  border: 1px solid #d5c4c0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--a-ink, #1b2a3b);
+  padding: 9px 12px;
+  font-weight: 800;
+}
+
+.admin-v2 .settings-reset-confirm .confirm-danger {
+  background: #a94f46;
+  border-color: #a94f46;
+  color: #fff;
+}
+
+.admin-v2 .draft-launch {
+  border-top: 3px solid #89929a;
+}
+
+.admin-v2 .draft-launch .draft-settings-note {
+  margin-top: 16px;
+  padding: 13px 14px;
+  border-radius: 11px;
+  background: #f1eee8;
+  color: #5f666b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (max-width: 620px) {
+  .admin-v2 .settings-tournament-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-v2 .settings-tournament-actions .button {
+    width: 100%;
+  }
+
+  .admin-v2 .settings-reset-confirm > div {
+    flex-direction: column;
+  }
+
+  .admin-v2 .settings-reset-confirm button {
+    width: 100%;
+  }
+}
+
+/* BTPB ADMIN START RESET V1 END */

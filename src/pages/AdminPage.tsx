@@ -22,13 +22,13 @@ import {
   adminRenameGroup,
   adminPostponeMatch,
   adminStartTournament,
+  adminResetTournamentMatches,
   adminUpdateMatchResult,
   createTournament,
   isCurrentUserAdmin,
   listAdminTournaments,
   loadTournamentBundleById,
   pauseMatch,
-  regenerateGroupSchedule,
   resumeMatch,
   slugify,
   startMatch,
@@ -265,11 +265,15 @@ function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPa
   }
 
   if (bundle.tournament.status === 'draft') return <section className="panel draft-launch">
-    <div className="panel-title"><h2>Configurazione pronta</h2><span>DRAFT</span></div>
-    <div className="stats-strip"><Stat n={activeTeams} label="squadre"/><Stat n={bundle.groups.length} label="gironi"/><Stat n={bundle.fields.filter(f=>f.is_active).length} label="campi"/><Stat n={bundle.matches.length} label="partite"/></div>
-    <p>Controlla soprattutto le sezioni <strong>Squadre</strong> e <strong>Gironi</strong>. Finché il torneo è in bozza puoi modificare liberamente la struttura.</p>
-    <div className="inline-actions"><button className="button secondary" onClick={() => void act('regen', () => regenerateGroupSchedule(bundle.tournament.id))}>{busy === 'regen' ? 'Rigenerazione…' : 'Rigenera calendario'}</button><button className="button primary" onClick={() => void act('start', () => adminStartTournament(bundle.tournament.id))}>{busy === 'start' ? 'Avvio…' : 'AVVIA TORNEO'}</button></div>
-    <p className="hint">All'avvio tutte le partite dei gironi entrano nella coda rigida e i primi match vengono assegnati ai campi liberi.</p>
+    <div className="panel-title"><h2>Torneo non iniziato</h2><span>BOZZA</span></div>
+    <div className="stats-strip">
+      <Stat n={activeTeams} label="squadre"/>
+      <Stat n={bundle.groups.length} label="gironi"/>
+      <Stat n={bundle.fields.filter(f=>f.is_active).length} label="campi"/>
+      <Stat n={bundle.matches.length} label="partite"/>
+    </div>
+    <p>Puoi ancora modificare squadre, gironi, campi e regole. Finché il torneo resta in bozza <strong>nessuna partita viene assegnata ai campi</strong>.</p>
+    <div className="draft-settings-note">Per avviare coda e assegnazione automatica ai tavoli vai in <strong>Impostazioni → Gestione torneo</strong> e premi <strong>INIZIA TORNEO</strong>.</div>
   </section>;
 
   return <>
@@ -842,6 +846,8 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   const [tm,setTm]=useState(initMinutes('third_place'));
   const [tg,setTg]=useState(initGoals('third_place'));
   const [busy,setBusy]=useState(false);
+  const [controlBusy,setControlBusy]=useState<'start'|'reset'|''>('');
+  const [resetConfirm,setResetConfirm]=useState(false);
 
   useEffect(()=>{
     setTournamentName(bundle.tournament.name);
@@ -853,9 +859,11 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
     setKm(initMinutes('knockout'));setKg(initGoals('knockout'));
     setFm(initMinutes('final'));setFg(initGoals('final'));
     setTm(initMinutes('third_place'));setTg(initGoals('third_place'));
+    setResetConfirm(false);
   },[
     bundle.tournament.id,
     bundle.tournament.name,
+    bundle.tournament.status,
     bundle.settings.pause_enabled,
     bundle.settings.qualifiers_per_group,
     bundle.settings.third_place_enabled,
@@ -881,6 +889,31 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
     }
   }
 
+  async function startTournament(){
+    setControlBusy('start');setError('');
+    try{
+      await adminStartTournament(bundle.tournament.id);
+      await refresh();
+    }catch(e){
+      setError(e instanceof Error?e.message:String(e));
+    }finally{
+      setControlBusy('');
+    }
+  }
+
+  async function resetTournament(){
+    setControlBusy('reset');setError('');
+    try{
+      await adminResetTournamentMatches(bundle.tournament.id);
+      setResetConfirm(false);
+      await refresh();
+    }catch(e){
+      setError(e instanceof Error?e.message:String(e));
+    }finally{
+      setControlBusy('');
+    }
+  }
+
   async function save(){
     setBusy(true);setError('');
     try{
@@ -903,8 +936,58 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   }
 
   const nameChanged=tournamentName.trim()!==bundle.tournament.name;
+  const isDraft=bundle.tournament.status==='draft';
 
   return <div className="settings-page-v3">
+    <section className="panel settings-tournament-control-card">
+      <div className="panel-title">
+        <h2>Gestione torneo</h2>
+        <span>avvio e reset</span>
+      </div>
+
+      <div className="settings-tournament-control-copy">
+        <span className="settings-status-chip">{isDraft?'BOZZA':bundle.tournament.status}</span>
+        {isDraft
+          ? <>
+              <strong>Il torneo non è ancora partito</strong>
+              <p>Le partite esistono ma restano non assegnate. Premendo INIZIA TORNEO entrano nella coda e i primi match vengono assegnati automaticamente ai campi liberi.</p>
+            </>
+          : <>
+              <strong>Il torneo è stato avviato</strong>
+              <p>L'assegnazione automatica ai campi è attiva secondo la coda. Puoi azzerare tutte le partite per tornare alla configurazione iniziale.</p>
+            </>}
+      </div>
+
+      <div className="settings-tournament-actions">
+        {isDraft && <button
+          className="button primary settings-start-button"
+          disabled={controlBusy!==''}
+          onClick={()=>void startTournament()}
+        >
+          {controlBusy==='start'?'Avvio…':'INIZIA TORNEO'}
+        </button>}
+
+        <button
+          className="button settings-reset-button"
+          disabled={controlBusy!==''}
+          onClick={()=>setResetConfirm(true)}
+        >
+          RESET PARTITE
+        </button>
+      </div>
+
+      {resetConfirm && <div className="settings-reset-confirm">
+        <strong>Azzerare tutte le partite?</strong>
+        <p>Verranno cancellati risultati, timer, assegnazioni ai campi, coda, qualificazioni e tabellone eliminatorio. Squadre, gironi, campi e regole resteranno invariati. Il torneo tornerà in bozza e dovrai premere di nuovo INIZIA TORNEO.</p>
+        <div>
+          <button disabled={controlBusy!==''} onClick={()=>setResetConfirm(false)}>Annulla</button>
+          <button className="confirm-danger" disabled={controlBusy!==''} onClick={()=>void resetTournament()}>
+            {controlBusy==='reset'?'Reset…':'SÌ, RESETTA PARTITE'}
+          </button>
+        </div>
+      </div>}
+    </section>
+
     <section className="panel settings-identity-card">
       <div className="panel-title">
         <h2>Identità torneo</h2>
