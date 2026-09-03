@@ -173,15 +173,19 @@ function ScreenField({ name, match, bundle, flash }: { name: string; match?: Mat
   if (!match) return <article className="tv-field free"><div className="tv-field-name">{name}</div><div className="tv-free">LIBERO</div></article>;
   const countdown = countdownRemaining(match.started_at);
   const remaining = secondsRemaining(match);
+  // Il countdown 3-2-1 appartiene solo all'interfaccia giocatore.
+  // Sulla TV il timer resta fermo al valore iniziale finché il countdown non è terminato.
   let clock = match.duration_seconds == null ? '∞' : formatClock(match.duration_seconds);
-  if (match.status === 'playing' && countdown > 0) clock = String(countdown);
-  else if (match.status === 'playing') clock = match.duration_seconds == null ? '∞' : formatClock(remaining);
-  else if (match.status === 'awaiting_result') clock = match.duration_seconds == null ? '∞' : '00:00';
+  if (match.status === 'playing' && countdown <= 0) {
+    clock = match.duration_seconds == null ? '∞' : formatClock(remaining);
+  } else if (match.status === 'awaiting_result') {
+    clock = match.duration_seconds == null ? '∞' : '00:00';
+  }
 
   return <article className={flash ? 'tv-field active new-match' : 'tv-field active'}>
     <div className="tv-field-name">{name}</div>
     <div className="tv-field-teams"><strong>{teamName(bundle, match.team1_id)}</strong><span>VS</span><strong>{teamName(bundle, match.team2_id)}</strong></div>
-    <div className={match.status === 'playing' && countdown > 0 ? 'tv-field-clock countdown' : 'tv-field-clock'}>{clock}</div>
+    <div className="tv-field-clock">{clock}</div>
     {flash && <div className="tv-new-match-label">NUOVA PARTITA</div>}
   </article>;
 }
