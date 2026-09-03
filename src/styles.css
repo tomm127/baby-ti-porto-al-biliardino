@@ -1799,3 +1799,239 @@ button:disabled { cursor:not-allowed; }
     flex: 1;
   }
 }
+
+/* ==========================================================================
+   BTPB LANDING — LIGHT THEME V1
+   Based on the final TV + player visual language.
+   ========================================================================== */
+
+.landing-page.landing-v2 {
+  --l-bg: #f4f1ea;
+  --l-surface: #fffdfa;
+  --l-ink: #18283a;
+  --l-muted: #68727a;
+  --l-line: #d9d4c9;
+  --l-teal: #89b4ad;
+  --l-teal-soft: #e7f0ee;
+  --l-gold: #ceb57b;
+  --l-gold-soft: #f4ead1;
+  --l-terracotta: #c98a79;
+
+  min-height: 100vh;
+  padding: 22px 16px 36px;
+  background: var(--l-bg);
+  color: var(--l-ink);
+  display: block;
+  position: relative;
+}
+
+.landing-v2 .landing-admin-link {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: 16px;
+  z-index: 30;
+  border: 1px solid var(--l-line);
+  border-radius: 999px;
+  background: rgba(255,253,250,.92);
+  color: var(--l-muted);
+  padding: 8px 11px;
+  font-size: 11px;
+  font-weight: 850;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(25,31,36,.03);
+}
+
+.landing-v2 .landing-admin-link:hover {
+  color: var(--l-ink);
+  background: #fffdfa;
+}
+
+.landing-shell-v2 {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding-top: 20px;
+}
+
+.landing-brand-v2 {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 16px 34px 26px;
+  text-align: center;
+}
+
+.landing-brand-v2 img {
+  width: clamp(108px, 24vw, 150px);
+  height: clamp(108px, 24vw, 150px);
+  object-fit: cover;
+  border-radius: 24px;
+  box-shadow: 0 8px 26px rgba(25,31,36,.09);
+}
+
+.landing-brand-v2 h1 {
+  margin: 0;
+  color: var(--l-ink);
+  font-size: clamp(34px, 8.5vw, 54px);
+  line-height: .94;
+  letter-spacing: -.055em;
+}
+
+.landing-brand-v2 p {
+  margin: 8px 0 0;
+  color: var(--l-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.landing-v2 .connection-banner {
+  margin: 0 0 12px;
+}
+
+.landing-tournament-list-v2 {
+  display: grid;
+  gap: 14px;
+}
+
+.landing-tournament-v2 {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--l-line);
+  border-top: 4px solid var(--l-gold);
+  border-radius: 21px;
+  background: var(--l-surface);
+  box-shadow: 0 6px 18px rgba(25,31,36,.045);
+}
+
+.landing-tournament-title-v2 {
+  padding: 2px 2px 8px;
+}
+
+.landing-tournament-title-v2 > span {
+  display: block;
+  color: #6b8f8a;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .14em;
+}
+
+.landing-tournament-title-v2 h2 {
+  margin: 4px 0 0;
+  color: var(--l-ink);
+  font-size: clamp(26px, 6.5vw, 36px);
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.landing-play-v2 {
+  width: 100%;
+  min-height: 154px;
+  border: 1px solid #d7c68e;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(244,234,209,.95), rgba(244,234,209,.72));
+  color: var(--l-ink);
+  padding: 18px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(25,31,36,.035);
+}
+
+.landing-play-v2 strong {
+  font-size: clamp(54px, 15vw, 84px);
+  line-height: .82;
+  letter-spacing: -.065em;
+  font-weight: 950;
+}
+
+.landing-play-v2 span {
+  color: #766a49;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.landing-play-v2:hover {
+  background: #f1e4c3;
+}
+
+.landing-tv-v2 {
+  width: 100%;
+  min-height: 56px;
+  border: 1px solid #c8d9d5;
+  border-radius: 15px;
+  background: var(--l-teal-soft);
+  color: #365f5b;
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.landing-tv-v2 strong {
+  font-size: 23px;
+  line-height: 1;
+}
+
+.landing-tv-v2:hover {
+  background: #dfeae8;
+}
+
+.landing-loading-v2,
+.landing-empty-v2 {
+  padding: 30px 20px;
+  border: 1px solid var(--l-line);
+  border-radius: 18px;
+  background: var(--l-surface);
+  color: var(--l-muted);
+  text-align: center;
+  font-weight: 750;
+}
+
+@media (min-width: 700px) {
+  .landing-shell-v2 {
+    padding-top: 24px;
+  }
+
+  .landing-tournament-v2 {
+    padding: 20px;
+  }
+
+  .landing-play-v2 {
+    min-height: 176px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-page.landing-v2 {
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  .landing-v2 .landing-admin-link {
+    right: 11px;
+  }
+
+  .landing-brand-v2 {
+    padding-left: 26px;
+    padding-right: 26px;
+    padding-top: 20px;
+  }
+
+  .landing-brand-v2 img {
+    border-radius: 20px;
+  }
+
+  .landing-tournament-v2 {
+    padding: 13px;
+  }
+
+  .landing-play-v2 {
+    min-height: 142px;
+  }
+}
