@@ -174,13 +174,13 @@ function ScreenField({ name, match, bundle, flash }: { name: string; match?: Mat
   if (!match) return <article className="tv-field free"><div className="tv-field-name">{name}</div><div className="tv-free">LIBERO</div></article>;
   const countdown = countdownRemaining(match.started_at);
   const remaining = secondsRemaining(match);
-  // Il countdown 3-2-1 appartiene solo all'interfaccia giocatore.
-  // Sulla TV il timer resta fermo al valore iniziale finché il countdown non è terminato.
-  let clock = match.duration_seconds == null ? '∞' : formatClock(match.duration_seconds);
+  // Sulla TV il countdown 3-2-1 non viene mostrato.
+  // Finché la partita non è realmente iniziata, il campo mostra PRONTA.
+  let clock = 'PRONTA';
   if (match.status === 'playing' && countdown <= 0) {
-    clock = match.duration_seconds == null ? '∞' : formatClock(remaining);
+    clock = match.duration_seconds == null ? 'IN CORSO' : formatClock(remaining);
   } else if (match.status === 'awaiting_result') {
-    clock = match.duration_seconds == null ? '∞' : '00:00';
+    clock = match.duration_seconds == null ? 'IN CORSO' : '00:00';
   }
 
   return <article className={flash ? 'tv-field active new-match' : 'tv-field active'}>
