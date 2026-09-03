@@ -563,3 +563,139 @@ button:disabled { cursor:not-allowed; }
   .group-name-rename { flex-wrap:wrap; }
   .group-name-rename input { width:100%; flex-basis:100%; }
 }
+
+
+/* Step 11.2: compact dashboard actions */
+.admin-dashboard-toolbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 14px;
+}
+
+.admin-finished-link {
+  border:1px solid #d9d7d0;
+  background:#fff;
+  color:#282828;
+  border-radius:10px;
+  padding:9px 12px;
+  font-size:11px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.admin-finished-link:hover {
+  background:#f6f4ed;
+}
+
+.admin-total-pause-button {
+  margin-left:auto;
+  border:0;
+  border-radius:9px;
+  background:#c9382b;
+  color:#fff;
+  padding:9px 13px;
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.06em;
+  cursor:pointer;
+  box-shadow:none;
+}
+
+.admin-total-pause-button:hover {
+  background:#ad2d22;
+}
+
+.admin-total-resume-button {
+  margin-left:auto;
+  border:0;
+  border-radius:9px;
+  background:#ffd033;
+  color:#1a1a1a;
+  padding:9px 13px;
+  font-size:10px;
+  font-weight:950;
+  cursor:pointer;
+}
+
+.admin-total-pause-button:disabled,
+.admin-total-resume-button:disabled {
+  opacity:.55;
+  cursor:default;
+}
+
+.admin-total-pause-confirm {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:14px;
+  margin:-5px 0 14px auto;
+  padding:10px 11px;
+  width:max-content;
+  max-width:100%;
+  border:1px solid #e1b3ad;
+  background:#fff5f3;
+  border-radius:11px;
+}
+
+.admin-total-pause-confirm>strong {
+  font-size:11px;
+}
+
+.admin-total-pause-confirm>div {
+  display:flex;
+  gap:6px;
+}
+
+.admin-total-pause-confirm button {
+  border:1px solid #ddd;
+  border-radius:8px;
+  background:#fff;
+  padding:7px 9px;
+  font-size:10px;
+  font-weight:850;
+}
+
+.admin-total-pause-confirm .confirm-danger {
+  border-color:#b92f24;
+  background:#c9382b;
+  color:#fff;
+}
+
+@media (max-width:620px) {
+  .admin-dashboard-toolbar {
+    align-items:stretch;
+  }
+
+  .admin-finished-link,
+  .admin-total-pause-button,
+  .admin-total-resume-button {
+    min-height:40px;
+  }
+
+  .admin-finished-link {
+    flex:1;
+    text-align:left;
+  }
+
+  .admin-total-pause-button,
+  .admin-total-resume-button {
+    flex:none;
+    margin-left:0;
+  }
+
+  .admin-total-pause-confirm {
+    width:100%;
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .admin-total-pause-confirm>div {
+    width:100%;
+  }
+
+  .admin-total-pause-confirm button {
+    flex:1;
+  }
+}

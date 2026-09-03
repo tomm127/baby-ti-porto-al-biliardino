@@ -97,6 +97,7 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [matchesFinishedOnly, setMatchesFinishedOnly] = useState(false);
 
   const refreshList = useCallback(async () => {
     const items = await listAdminTournaments();
@@ -147,7 +148,15 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
 
   function goTo(key: AdminTab) {
     setCreating(false);
+    setMatchesFinishedOnly(false);
     setTab(key);
+    setMobileMenuOpen(false);
+  }
+
+  function goToFinishedMatches() {
+    setCreating(false);
+    setMatchesFinishedOnly(true);
+    setTab('matches');
     setMobileMenuOpen(false);
   }
 
@@ -176,22 +185,36 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
       {loading && <div className="empty-state">Caricamento…</div>}
       {creating && <CreateTournamentForm onCreated={created} onCancel={() => setCreating(false)} />}
       {!creating && !loading && tournaments.length === 0 && <CreateTournamentForm onCreated={created} />}
-      {!creating && bundle && <AdminTabContent tab={tab} bundle={bundle} refresh={refreshBundle} setError={setError} />}
+      {!creating && bundle && <AdminTabContent tab={tab} bundle={bundle} refresh={refreshBundle} setError={setError} matchesFinishedOnly={matchesFinishedOnly} onOpenFinishedMatches={goToFinishedMatches} />}
     </section>
   </main>;
 }
 
-function AdminTabContent({ tab, bundle, refresh, setError }: { tab: AdminTab; bundle: TournamentBundle; refresh: () => Promise<void>; setError: (s: string) => void }) {
-  if (tab === 'live') return <LiveAdmin bundle={bundle} refresh={refresh} setError={setError} />;
+function AdminTabContent({
+  tab,
+  bundle,
+  refresh,
+  setError,
+  matchesFinishedOnly,
+  onOpenFinishedMatches,
+}: {
+  tab: AdminTab;
+  bundle: TournamentBundle;
+  refresh: () => Promise<void>;
+  setError: (s: string) => void;
+  matchesFinishedOnly: boolean;
+  onOpenFinishedMatches: () => void;
+}) {
+  if (tab === 'live') return <LiveAdmin bundle={bundle} refresh={refresh} setError={setError} onOpenFinishedMatches={onOpenFinishedMatches} />;
   if (tab === 'teams') return <TeamsAdmin bundle={bundle} refresh={refresh} setError={setError} />;
   if (tab === 'groups') return <GroupsAdmin bundle={bundle} refresh={refresh} setError={setError} />;
   if (tab === 'bracket') return <BracketAdmin bundle={bundle} refresh={refresh} setError={setError} />;
-  if (tab === 'matches') return <MatchesAdmin bundle={bundle} refresh={refresh} setError={setError} />;
+  if (tab === 'matches') return <MatchesAdmin bundle={bundle} refresh={refresh} setError={setError} finishedOnly={matchesFinishedOnly} />;
   if (tab === 'fields') return <FieldsAdmin bundle={bundle} refresh={refresh} setError={setError} />;
   return <SettingsAdmin bundle={bundle} refresh={refresh} setError={setError} />;
 }
 
-function LiveAdmin({ bundle, refresh, setError }: AdminPanelProps) {
+function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPanelProps & { onOpenFinishedMatches: () => void }) {
   const [busy, setBusy] = useState('');
   const [pauseConfirm, setPauseConfirm] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -243,21 +266,27 @@ function LiveAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   </section>;
 
   return <>
-    <section className={tournamentPaused ? 'admin-emergency-bar active' : 'admin-emergency-bar'}>
-      <div>
-        <span>{tournamentPaused ? 'TORNEO IN PAUSA' : 'CONTROLLO EMERGENZA'}</span>
-        <strong>{tournamentPaused ? 'Timer e automazioni sono congelati' : 'Metti in pausa tutto il torneo'}</strong>
-        <small>{tournamentPaused ? 'Puoi continuare a correggere risultati, coda, squadre e impostazioni.' : 'Usalo solo se è necessario fermare contemporaneamente tutti i campi.'}</small>
-      </div>
-      {tournamentPaused
-        ? <button className="button resume-tournament" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(false)}>{busy === 'emergency-pause' ? 'Ripresa…' : '▶ RIPRENDI TORNEO'}</button>
-        : <button className="button emergency-pause-button" disabled={busy === 'emergency-pause'} onClick={() => setPauseConfirm(true)}>Ⅱ PAUSA TORNEO</button>}
-    </section>
+    <div className="admin-dashboard-toolbar">
+      <button className="admin-finished-link" onClick={onOpenFinishedMatches}>
+        ✓ Vai alle partite concluse
+      </button>
 
-    {pauseConfirm && !tournamentPaused && <section className="admin-emergency-confirm">
-      <div><strong>Mettere in pausa l'intero torneo?</strong><span>Tutti i timer verranno congelati. I giocatori non potranno avviare, mettere in pausa, terminare o confermare risultati finché il torneo non viene ripreso.</span></div>
-      <div><button onClick={() => setPauseConfirm(false)}>Annulla</button><button className="confirm-danger" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(true)}>METTI IN PAUSA</button></div>
-    </section>}
+      {tournamentPaused
+        ? <button className="admin-total-resume-button" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(false)}>
+            {busy === 'emergency-pause' ? 'Ripresa…' : '▶ RIPRENDI TORNEO'}
+          </button>
+        : <button className="admin-total-pause-button" disabled={busy === 'emergency-pause'} onClick={() => setPauseConfirm(true)}>
+            PAUSA TOTALE
+          </button>}
+    </div>
+
+    {pauseConfirm && !tournamentPaused && <div className="admin-total-pause-confirm">
+      <strong>Mettere in pausa tutto il torneo?</strong>
+      <div>
+        <button onClick={() => setPauseConfirm(false)}>Annulla</button>
+        <button className="confirm-danger" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(true)}>PAUSA TOTALE</button>
+      </div>
+    </div>}
 
     <section className="stats-strip admin-dashboard-stats">
       <Stat n={completedMatches} label="concluse"/>
@@ -670,10 +699,10 @@ function BracketAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   </>;
 }
 
-function MatchesAdmin({ bundle, refresh, setError }: AdminPanelProps) {
+function MatchesAdmin({ bundle, refresh, setError, finishedOnly = false }: AdminPanelProps & { finishedOnly?: boolean }) {
   const [query,setQuery]=useState('');
   const [showFinished,setShowFinished]=useState(true);
-  const [showFuture,setShowFuture]=useState(true);
+  const [showFuture,setShowFuture]=useState(!finishedOnly);
   const [view,setView]=useState<'chronology'|'groups'>('chronology');
   const [statusFilter,setStatusFilter]=useState<'all'|MatchRow['status']>('all');
   const [fieldFilter,setFieldFilter]=useState('all');
