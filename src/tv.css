@@ -622,3 +622,14 @@
   justify-self: center !important;
   text-align: center !important;
 }
+
+
+/* TV live VS style fix */
+.tv-v2 .tv-field-teams span {
+  color: #8b7650 !important;
+  font-size: clamp(18px, 1.1vw, 24px) !important;
+  font-weight: 950 !important;
+  letter-spacing: .08em !important;
+  line-height: 1 !important;
+  text-transform: lowercase !important;
+}
