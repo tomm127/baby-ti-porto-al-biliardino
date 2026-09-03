@@ -18,6 +18,7 @@ import {
   adminForfeitMatch,
   adminCancelMatch,
   adminUpdateTournamentRules,
+  adminRenameTournament,
   adminRenameGroup,
   adminPostponeMatch,
   adminStartTournament,
@@ -74,7 +75,7 @@ export function AdminPage() {
 
   if (!authChecked) return <CenteredAdmin title="Controllo sessione…" />;
   if (!authenticated) {
-    return <main className="page page-centered"><section className="login-card">
+    return <main className="page page-centered admin-login-page"><section className="login-card admin-login-card">
       <button className="text-button" onClick={() => navigate('/')}>← Torna indietro</button>
       <div className="eyebrow">AMMINISTRATORE</div><h1>Controllo torneo</h1>
       {!hasSupabaseConfig && <div className="alert warning">Supabase non è configurato. Crea prima <code>.env.local</code>.</div>}
@@ -109,7 +110,14 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
   const refreshBundle = useCallback(async (id?: string) => {
     const target = id ?? selectedId;
     if (!target) { setBundle(null); return; }
-    try { setBundle(await loadTournamentBundleById(target)); setError(''); }
+    try {
+      const next = await loadTournamentBundleById(target);
+      setBundle(next);
+      setTournaments((current) => current.map((t) => t.id === next.tournament.id
+        ? { ...t, name: next.tournament.name, slug: next.tournament.slug, status: next.tournament.status, phase: next.tournament.phase }
+        : t));
+      setError('');
+    }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   }, [selectedId]);
 
@@ -818,14 +826,148 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   const rule=(scope:'group'|'knockout'|'final'|'third_place')=>bundle.rules.find(r=>r.scope===scope);
   const initMinutes=(scope:'group'|'knockout'|'final'|'third_place')=>{const s=rule(scope)?.duration_seconds;return s==null?'':String(s/60)};
   const initGoals=(scope:'group'|'knockout'|'final'|'third_place')=>{const g=rule(scope)?.goal_target;return g==null?'':String(g)};
-  const [pause,setPause]=useState(bundle.settings.pause_enabled); const [qualifiers,setQualifiers]=useState(String(bundle.settings.qualifiers_per_group)); const [third,setThird]=useState(bundle.settings.third_place_enabled); const [pins,setPins]=useState(bundle.settings.team_pin_enabled);
-  const [gm,setGm]=useState(initMinutes('group')); const [gg,setGg]=useState(initGoals('group')); const [km,setKm]=useState(initMinutes('knockout')); const [kg,setKg]=useState(initGoals('knockout')); const [fm,setFm]=useState(initMinutes('final')); const [fg,setFg]=useState(initGoals('final')); const [tm,setTm]=useState(initMinutes('third_place')); const [tg,setTg]=useState(initGoals('third_place')); const [busy,setBusy]=useState(false);
-  useEffect(()=>{setPause(bundle.settings.pause_enabled);setQualifiers(String(bundle.settings.qualifiers_per_group));setThird(bundle.settings.third_place_enabled);setPins(bundle.settings.team_pin_enabled);setGm(initMinutes('group'));setGg(initGoals('group'));setKm(initMinutes('knockout'));setKg(initGoals('knockout'));setFm(initMinutes('final'));setFg(initGoals('final'));setTm(initMinutes('third_place'));setTg(initGoals('third_place'));},[bundle.tournament.id,bundle.settings.pause_enabled,bundle.settings.qualifiers_per_group,bundle.settings.third_place_enabled,bundle.settings.team_pin_enabled,bundle.rules]);
-  const duration=(v:string)=>v.trim()===''?null:Math.max(1,Math.round(Number(v)*60)); const goal=(v:string)=>v.trim()===''?null:Math.max(1,Math.round(Number(v)));
-  async function save(){setBusy(true);setError('');try{await adminUpdateTournamentRules(bundle.tournament.id,{pauseEnabled:pause,qualifiersPerGroup:Number(qualifiers),thirdPlaceEnabled:third,teamPinEnabled:pins,group:{durationSeconds:duration(gm),goalTarget:goal(gg)},knockout:{durationSeconds:duration(km),goalTarget:goal(kg)},final:{durationSeconds:duration(fm),goalTarget:goal(fg)},thirdPlace:{durationSeconds:duration(tm),goalTarget:goal(tg)}});await refresh();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
-  return <div className="settings-grid">
-    <section className="panel settings-editor"><div className="panel-title"><h2>Regole modificabili</h2><span>future partite</span></div><label>Qualificate per girone<input type="number" min="1" value={qualifiers} onChange={e=>setQualifiers(e.target.value)}/></label><label className="check-row"><input type="checkbox" checked={pause} onChange={e=>setPause(e.target.checked)}/>Permetti pausa timer</label><label className="check-row"><input type="checkbox" checked={pins} onChange={e=>setPins(e.target.checked)}/>PIN squadre</label><label className="check-row"><input type="checkbox" checked={third} onChange={e=>setThird(e.target.checked)}/>3º/4º posto</label><div className="rule-editor-list"><EditableRule title="Gironi" minutes={gm} goals={gg} setMinutes={setGm} setGoals={setGg}/><EditableRule title="Eliminatorie" minutes={km} goals={kg} setMinutes={setKm} setGoals={setKg}/><EditableRule title="Finale" minutes={fm} goals={fg} setMinutes={setFm} setGoals={setFg}/><EditableRule title="3º/4º posto" minutes={tm} goals={tg} setMinutes={setTm} setGoals={setTg}/></div><button className="button primary" disabled={busy} onClick={()=>void save()}>{busy?'Salvataggio…':'SALVA REGOLE'}</button><p className="hint">Le modifiche si applicano alle partite non ancora iniziate. Una partita già in corso conserva timer e target con cui è partita.</p></section>
-    <section className="panel"><h2>Stato</h2><KeyValue k="Ordine coda" v={bundle.settings.ordering_mode==='group_rotation'?'Rotazione gironi':'Girone per girone'}/><KeyValue k="Torneo" v={bundle.tournament.status}/><KeyValue k="Fase" v={bundle.tournament.phase}/><KeyValue k="Slug" v={bundle.tournament.slug}/><p className="hint">L'ordine generale non viene rigenerato a torneo avviato: per cambiarlo usa i controlli della coda nella pagina Live.</p></section>
+
+  const [tournamentName,setTournamentName]=useState(bundle.tournament.name);
+  const [nameBusy,setNameBusy]=useState(false);
+  const [pause,setPause]=useState(bundle.settings.pause_enabled);
+  const [qualifiers,setQualifiers]=useState(String(bundle.settings.qualifiers_per_group));
+  const [third,setThird]=useState(bundle.settings.third_place_enabled);
+  const [pins,setPins]=useState(bundle.settings.team_pin_enabled);
+  const [gm,setGm]=useState(initMinutes('group'));
+  const [gg,setGg]=useState(initGoals('group'));
+  const [km,setKm]=useState(initMinutes('knockout'));
+  const [kg,setKg]=useState(initGoals('knockout'));
+  const [fm,setFm]=useState(initMinutes('final'));
+  const [fg,setFg]=useState(initGoals('final'));
+  const [tm,setTm]=useState(initMinutes('third_place'));
+  const [tg,setTg]=useState(initGoals('third_place'));
+  const [busy,setBusy]=useState(false);
+
+  useEffect(()=>{
+    setTournamentName(bundle.tournament.name);
+    setPause(bundle.settings.pause_enabled);
+    setQualifiers(String(bundle.settings.qualifiers_per_group));
+    setThird(bundle.settings.third_place_enabled);
+    setPins(bundle.settings.team_pin_enabled);
+    setGm(initMinutes('group'));setGg(initGoals('group'));
+    setKm(initMinutes('knockout'));setKg(initGoals('knockout'));
+    setFm(initMinutes('final'));setFg(initGoals('final'));
+    setTm(initMinutes('third_place'));setTg(initGoals('third_place'));
+  },[
+    bundle.tournament.id,
+    bundle.tournament.name,
+    bundle.settings.pause_enabled,
+    bundle.settings.qualifiers_per_group,
+    bundle.settings.third_place_enabled,
+    bundle.settings.team_pin_enabled,
+    bundle.rules
+  ]);
+
+  const duration=(v:string)=>v.trim()===''?null:Math.max(1,Math.round(Number(v)*60));
+  const goal=(v:string)=>v.trim()===''?null:Math.max(1,Math.round(Number(v)));
+
+  async function saveName(){
+    const clean=tournamentName.trim();
+    if(!clean){setError('Il nome del torneo non può essere vuoto.');return;}
+    if(clean===bundle.tournament.name)return;
+    setNameBusy(true);setError('');
+    try{
+      await adminRenameTournament(bundle.tournament.id,clean);
+      await refresh();
+    }catch(e){
+      setError(e instanceof Error?e.message:String(e));
+    }finally{
+      setNameBusy(false);
+    }
+  }
+
+  async function save(){
+    setBusy(true);setError('');
+    try{
+      await adminUpdateTournamentRules(bundle.tournament.id,{
+        pauseEnabled:pause,
+        qualifiersPerGroup:Number(qualifiers),
+        thirdPlaceEnabled:third,
+        teamPinEnabled:pins,
+        group:{durationSeconds:duration(gm),goalTarget:goal(gg)},
+        knockout:{durationSeconds:duration(km),goalTarget:goal(kg)},
+        final:{durationSeconds:duration(fm),goalTarget:goal(fg)},
+        thirdPlace:{durationSeconds:duration(tm),goalTarget:goal(tg)}
+      });
+      await refresh();
+    }catch(e){
+      setError(e instanceof Error?e.message:String(e));
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  const nameChanged=tournamentName.trim()!==bundle.tournament.name;
+
+  return <div className="settings-page-v3">
+    <section className="panel settings-identity-card">
+      <div className="panel-title">
+        <h2>Identità torneo</h2>
+        <span>visibile a giocatori e TV</span>
+      </div>
+
+      <div className="settings-identity-grid">
+        <label className="settings-name-field">
+          <span>Nome torneo</span>
+          <input
+            value={tournamentName}
+            maxLength={120}
+            onChange={e=>setTournamentName(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Enter'&&nameChanged&&!nameBusy)void saveName();}}
+          />
+        </label>
+
+        <div className="settings-readonly">
+          <span>Slug / link</span>
+          <strong>{bundle.tournament.slug}</strong>
+        </div>
+      </div>
+
+      <div className="settings-name-actions">
+        <p className="hint">Cambiare il nome non modifica lo slug, quindi i link e i QR già condivisi continuano a funzionare.</p>
+        <button
+          className="button primary"
+          disabled={nameBusy||!nameChanged||!tournamentName.trim()}
+          onClick={()=>void saveName()}
+        >
+          {nameBusy?'Salvataggio…':'SALVA NOME'}
+        </button>
+      </div>
+    </section>
+
+    <div className="settings-grid">
+      <section className="panel settings-editor">
+        <div className="panel-title"><h2>Regole modificabili</h2><span>future partite</span></div>
+        <label>Qualificate per girone<input type="number" min="1" value={qualifiers} onChange={e=>setQualifiers(e.target.value)}/></label>
+        <label className="check-row"><input type="checkbox" checked={pause} onChange={e=>setPause(e.target.checked)}/>Permetti pausa timer</label>
+        <label className="check-row"><input type="checkbox" checked={pins} onChange={e=>setPins(e.target.checked)}/>PIN squadre</label>
+        <label className="check-row"><input type="checkbox" checked={third} onChange={e=>setThird(e.target.checked)}/>3º/4º posto</label>
+        <div className="rule-editor-list">
+          <EditableRule title="Gironi" minutes={gm} goals={gg} setMinutes={setGm} setGoals={setGg}/>
+          <EditableRule title="Eliminatorie" minutes={km} goals={kg} setMinutes={setKm} setGoals={setKg}/>
+          <EditableRule title="Finale" minutes={fm} goals={fg} setMinutes={setFm} setGoals={setFg}/>
+          <EditableRule title="3º/4º posto" minutes={tm} goals={tg} setMinutes={setTm} setGoals={setTg}/>
+        </div>
+        <button className="button primary" disabled={busy} onClick={()=>void save()}>
+          {busy?'Salvataggio…':'SALVA REGOLE'}
+        </button>
+        <p className="hint">Le modifiche si applicano alle partite non ancora iniziate. Una partita già in corso conserva timer e target con cui è partita.</p>
+      </section>
+
+      <section className="panel">
+        <div className="panel-title"><h2>Stato torneo</h2><span>sola lettura</span></div>
+        <KeyValue k="Ordine coda" v={bundle.settings.ordering_mode==='group_rotation'?'Rotazione gironi':'Girone per girone'}/>
+        <KeyValue k="Torneo" v={bundle.tournament.status}/>
+        <KeyValue k="Fase" v={bundle.tournament.phase}/>
+        <KeyValue k="Slug" v={bundle.tournament.slug}/>
+        <p className="hint">L'ordine generale non viene rigenerato a torneo avviato: per cambiarlo usa i controlli della coda nella Dashboard.</p>
+      </section>
+    </div>
   </div>;
 }
 

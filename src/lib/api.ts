@@ -591,6 +591,13 @@ export async function adminGenerateKnockout(tournamentId: string) {
   return Number(data ?? 0);
 }
 
+export async function adminRenameTournament(tournamentId: string, name: string) {
+  const clean = name.trim();
+  if (!clean) throw new Error('Il nome del torneo non può essere vuoto.');
+  const { error } = await client().from('tournaments').update({ name: clean }).eq('id', tournamentId);
+  if (error) throw error;
+}
+
 export async function adminRenameGroup(groupId: string, name: string) {
   const clean = name.trim();
   if (!clean) throw new Error('Il nome del girone non può essere vuoto.');
