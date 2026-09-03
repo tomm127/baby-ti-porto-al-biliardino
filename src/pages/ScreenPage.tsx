@@ -122,8 +122,7 @@ export function ScreenPage({ slug }: { slug: string }) {
 
     <header className="tv-header">
       <div className="tv-brand-block">
-        <div className="tv-live-pill"><span /> BTPB LIVE</div>
-        <div><h1>{bundle.tournament.name}</h1><small>Baby ti porto al biliardino</small></div>
+        <div><h1>Baby Ti Porto al Biliardino</h1></div>
       </div>
       <button className="screen-exit" onClick={() => navigate('/')}>Esci</button>
     </header>
