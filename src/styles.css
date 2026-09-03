@@ -2857,3 +2857,27 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB WINNERS PAGE V1 END */
+
+/* BTPB PLAYER TURN COPY V1 START */
+.app-shell .ahead-hero span {
+  font-size: 14px !important;
+}
+
+.app-shell .ahead-hero.live-turn strong {
+  font-size: clamp(38px, 11vw, 60px);
+  line-height: .9;
+  letter-spacing: -.055em;
+}
+
+.app-shell .ahead-hero.live-turn span {
+  margin-top: 12px;
+  font-size: clamp(15px, 4.1vw, 18px) !important;
+  letter-spacing: .08em;
+}
+
+@media (max-width: 420px) {
+  .app-shell .ahead-hero.live-turn strong {
+    font-size: clamp(34px, 10.5vw, 48px);
+  }
+}
+/* BTPB PLAYER TURN COPY V1 END */

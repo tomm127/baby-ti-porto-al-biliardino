@@ -288,7 +288,7 @@ function PlayerHome({ bundle, teamId }: { bundle: TournamentBundle; teamId: stri
     nextCard = <section className={liveNow ? 'next-card urgent' : 'next-card'} onClick={() => liveNow && navigate(`/tournament/${bundle.tournament.slug}/match/${next.id}`)} role={liveNow ? 'button' : undefined}>
       <div className="eyebrow">{liveNow ? 'È IL VOSTRO TURNO' : 'PROSSIMA PARTITA'}</div>
       <div className="versus"><strong>{team.name}</strong><span>VS</span><strong>{opponent}</strong></div>
-      <div className="ahead-hero"><strong>{liveNow ? 'ORA' : ahead === 0 ? 'PROSSIMI' : ahead}</strong><span>{liveNow ? (field ?? 'CAMPO DA ASSEGNARE') : ahead === 0 ? 'SIETE I PROSSIMI' : `${ahead === 1 ? 'PARTITA' : 'PARTITE'} PRIMA DI VOI`}</span>{!liveNow && <small>Considera che ci sono {activeFieldCount} {activeFieldCount === 1 ? 'campo' : 'campi'}</small>}</div>
+      <div className={liveNow ? 'ahead-hero live-turn' : 'ahead-hero'}><strong>{liveNow ? 'TOCCA A VOI' : ahead === 0 ? 'PROSSIMI' : ahead}</strong><span>{liveNow ? (field ? `VAI AL ${field.toUpperCase()}` : 'CAMPO DA ASSEGNARE') : ahead === 0 ? 'SIETE I PROSSIMI' : `${ahead === 1 ? 'PARTITA' : 'PARTITE'} PRIMA DI VOI`}</span>{!liveNow && <small>Considera che ci sono {activeFieldCount} {activeFieldCount === 1 ? 'campo' : 'campi'}</small>}</div>
       {!liveNow && <div className="next-field">{field ?? 'Campo da assegnare'}</div>}
       {liveNow && <div className="tap-hint">Tocca per giocare →</div>}
     </section>;
