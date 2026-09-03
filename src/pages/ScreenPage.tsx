@@ -91,11 +91,28 @@ export function ScreenPage({ slug }: { slug: string }) {
   const queue = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder).slice(0, 10);
   const prepare = queue[0];
   const restQueue = queue.slice(1);
-  const visibleGroups = standings.slice(groupPage * GROUPS_PER_PAGE, groupPage * GROUPS_PER_PAGE + GROUPS_PER_PAGE);
+  const leftGroup = standings.length ? standings[(groupPage * GROUPS_PER_PAGE) % standings.length] : undefined;
+  const rightGroup = standings.length > 1 ? standings[(groupPage * GROUPS_PER_PAGE + 1) % standings.length] : undefined;
   const playerUrl = `${window.location.origin}/tournament/${bundle.tournament.slug}`;
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(playerUrl)}&size=180&margin=1&ecLevel=M`;
   const fieldColumns = activeFields.length <= 4 ? Math.max(activeFields.length, 1) : Math.ceil(activeFields.length / 2);
   const fieldStyle = { '--tv-field-cols': String(fieldColumns) } as CSSProperties;
+
+  const queuePanel = <div className="tv-queue-panel">
+    <div className="tv-section-title"><span>PROSSIME PARTITE</span><strong>{queue.length ? `${queue.length} IN CODA` : 'NESSUNA IN CODA'}</strong></div>
+    {prepare ? <div className={prepareFlash ? 'tv-prepare flash' : 'tv-prepare'}>
+      <div className="tv-prepare-label">PREPARATEVI</div>
+      <div className="tv-prepare-stage">{stageLabel(bundle, prepare)}</div>
+      <div className="tv-prepare-match"><strong>{teamName(bundle, prepare.team1_id)}</strong><span>VS</span><strong>{teamName(bundle, prepare.team2_id)}</strong></div>
+    </div> : <div className="tv-empty-queue">Nessuna partita in coda</div>}
+
+    <div className="tv-next-list">
+      {restQueue.map((match, index) => <div className="tv-next-row" key={match.id}>
+        <span>{index + 2}</span>
+        <div><small>{stageLabel(bundle, match)}</small><strong>{teamName(bundle, match.team1_id)} <em>vs</em> {teamName(bundle, match.team2_id)}</strong></div>
+      </div>)}
+    </div>
+  </div>;
 
   return <main className="screen-mode tv-v2">
     <ConnectionBanner online={online} cachedAt={cachedAt} />
@@ -114,40 +131,17 @@ export function ScreenPage({ slug }: { slug: string }) {
       {activeFields.map((field) => <ScreenField key={field.id} name={field.name} match={byField.get(field.id)} bundle={bundle} flash={flashingFields.has(field.id)} />)}
     </section>
 
-    <section className="tv-middle">
-      <div className="tv-queue-panel">
-        <div className="tv-section-title"><span>PROSSIME PARTITE</span><strong>{queue.length ? '10 max' : 'nessuna in coda'}</strong></div>
-        {prepare ? <div className={prepareFlash ? 'tv-prepare flash' : 'tv-prepare'}>
-          <div className="tv-prepare-label">PREPARATEVI</div>
-          <div className="tv-prepare-stage">{stageLabel(bundle, prepare)}</div>
-          <div className="tv-prepare-match"><strong>{teamName(bundle, prepare.team1_id)}</strong><span>VS</span><strong>{teamName(bundle, prepare.team2_id)}</strong></div>
-        </div> : <div className="tv-empty-queue">Nessuna partita in coda</div>}
-
-        <div className="tv-next-list">
-          {restQueue.map((match, index) => <div className="tv-next-row" key={match.id}>
-            <span>{index + 2}</span>
-            <div><small>{stageLabel(bundle, match)}</small><strong>{teamName(bundle, match.team1_id)} <em>vs</em> {teamName(bundle, match.team2_id)}</strong></div>
-          </div>)}
-        </div>
-      </div>
-
-      {bundle.tournament.phase === 'groups' ? <div className="tv-standings-panel">
-        <div className="tv-section-title"><span>CLASSIFICHE</span><strong>rotazione ogni 8 s</strong></div>
-        <div className="tv-standings-grid">
-          {visibleGroups.map((group) => <div className="tv-group-card" key={group.id}>
-            <h2>{group.name}</h2>
-            <div className="tv-standing-head"><span>#</span><span>Squadra</span><span>PT</span><span>DR</span></div>
-            {group.rows.slice(0, 8).map((row, index) => <div className="tv-standing-row" key={row.teamId}>
-              <span>{index + 1}</span><strong>{row.teamName}</strong><span>{row.points}</span><span>{row.goalDifference > 0 ? '+' : ''}{row.goalDifference}</span>
-            </div>)}
-          </div>)}
-        </div>
-        {groupPageCount > 1 && <div className="tv-page-dots">{Array.from({ length: groupPageCount }, (_, i) => <span className={i === groupPage ? 'active' : ''} key={i} />)}</div>}
-      </div> : <div className="tv-bracket-panel">
-        <div className="tv-section-title"><span>TABELLONE</span><strong>eliminazione diretta</strong></div>
+    {bundle.tournament.phase === 'groups' ? <section className="tv-middle tv-middle-groups">
+      <StandingPanel group={leftGroup} page={groupPage} pageCount={groupPageCount} side="left" />
+      {queuePanel}
+      <StandingPanel group={rightGroup} page={groupPage} pageCount={groupPageCount} side="right" />
+    </section> : <section className="tv-middle tv-middle-knockout">
+      {queuePanel}
+      <div className="tv-bracket-panel">
+        <div className="tv-section-title"><span>TABELLONE</span><strong>ELIMINAZIONE DIRETTA</strong></div>
         <KnockoutBracket bundle={bundle} compact />
-      </div>}
-    </section>
+      </div>
+    </section>}
 
     <footer className="tv-footer">
       <div className="tv-footer-brand"><img src="/brand/btpb-logo.png" alt="BTPB" /><div><strong>BTPB</strong><span>Segui il torneo dal telefono</span></div></div>
@@ -155,6 +149,22 @@ export function ScreenPage({ slug }: { slug: string }) {
       <div className="tv-qr"><img src={qrUrl} alt={`QR code per ${playerUrl}`} /></div>
     </footer>
   </main>;
+}
+
+function StandingPanel({ group, page, pageCount, side }: { group: ReturnType<typeof buildStandings>[number] | undefined; page: number; pageCount: number; side: 'left' | 'right' }) {
+  return <div className={`tv-standing-side tv-standing-${side}`}>
+    <div className="tv-section-title"><span>CLASSIFICA</span><strong>{pageCount > 1 ? 'CAMBIO OGNI 8 S' : 'LIVE'}</strong></div>
+    {group ? <>
+      <h2>{group.name}</h2>
+      <div className="tv-standing-head"><span>#</span><span>Squadra</span><span>PT</span><span>DR</span></div>
+      <div className="tv-standing-body">
+        {group.rows.map((row, index) => <div className="tv-standing-row" key={row.teamId}>
+          <span>{index + 1}</span><strong>{row.teamName}</strong><span>{row.points}</span><span>{row.goalDifference > 0 ? '+' : ''}{row.goalDifference}</span>
+        </div>)}
+      </div>
+      {pageCount > 1 && <div className="tv-page-dots">{Array.from({ length: pageCount }, (_, i) => <span className={i === page ? 'active' : ''} key={i} />)}</div>}
+    </> : <div className="tv-empty-standing">In attesa del girone</div>}
+  </div>;
 }
 
 function ScreenField({ name, match, bundle, flash }: { name: string; match?: MatchRow; bundle: TournamentBundle; flash: boolean }) {
