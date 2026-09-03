@@ -231,7 +231,7 @@ function TeamChooser({ bundle, onChosen }: { bundle: TournamentBundle; onChosen:
     <div className="eyebrow">{bundle.tournament.name}</div><h1>Qual è la tua squadra?</h1>
     <p className="lead small">Scrivi il nome della squadra oppure sceglila dai suggerimenti. All'inizio vengono mostrate tutte le squadre disponibili.</p>
     <label>Squadra</label>
-    <SearchableTeamPicker teams={bundle.teams} selectedId={selected} onSelect={(teamId) => { setSelected(teamId); setPin(''); }} />
+    <SearchableTeamPicker teams={bundle.teams.filter((team) => bundle.groupTeams.some((membership) => membership.team_id === team.id))} selectedId={selected} onSelect={(teamId) => { setSelected(teamId); setPin(''); }} />
     {bundle.settings.team_pin_enabled && selected && <><label>PIN squadra</label><input inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" /></>}
     {error && <div className="alert error">{error}</div>}
     {!online && <div className="alert warning">Per associare questo dispositivo a una squadra serve la connessione.</div>}
@@ -401,7 +401,7 @@ function MyTeam({ bundle, teamId, onChanged }: { bundle: TournamentBundle; teamI
     try { await leaveTeam(bundle.tournament.id); window.localStorage.removeItem(LAST_PLAYER_TOURNAMENT_KEY); await onChanged(); }
     finally { setBusy(false); }
   }
-  return <section className="panel form-panel my-team-v2"><div className="eyebrow">SQUADRA ASSOCIATA</div><h2>{currentTeam}</h2><p className="hint">Per cambiare squadra cercane un'altra qui sotto e conferma.</p><label>Nuova squadra</label><SearchableTeamPicker teams={bundle.teams} selectedId={newTeamId} onSelect={(id) => { setNewTeamId(id); setPin(''); }} placeholder="Cerca la nuova squadra" />{bundle.settings.team_pin_enabled && newTeamId && newTeamId !== teamId && <><label>PIN nuova squadra</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{error}</div>}<button className="button primary" disabled={busy || !online || !newTeamId || newTeamId === teamId} onClick={() => void change()}>Cambia squadra</button><button className="button ghost" disabled={busy || !online} onClick={() => void remove()}>Dissocia questo dispositivo</button></section>;
+  return <section className="panel form-panel my-team-v2"><div className="eyebrow">SQUADRA ASSOCIATA</div><h2>{currentTeam}</h2><p className="hint">Per cambiare squadra cercane un'altra qui sotto e conferma.</p><label>Nuova squadra</label><SearchableTeamPicker teams={bundle.teams.filter((team) => bundle.groupTeams.some((membership) => membership.team_id === team.id))} selectedId={newTeamId} onSelect={(id) => { setNewTeamId(id); setPin(''); }} placeholder="Cerca la nuova squadra" />{bundle.settings.team_pin_enabled && newTeamId && newTeamId !== teamId && <><label>PIN nuova squadra</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{error}</div>}<button className="button primary" disabled={busy || !online || !newTeamId || newTeamId === teamId} onClick={() => void change()}>Cambia squadra</button><button className="button ghost" disabled={busy || !online} onClick={() => void remove()}>Dissocia questo dispositivo</button></section>;
 }
 
 function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {

@@ -3,6 +3,8 @@ import {
   adminGenerateKnockout,
   adminSetEmergencyPause,
   adminAddTeam,
+  adminBulkAddTeams,
+  adminApplyGroupLayout,
   adminWithdrawTeam,
   adminRestoreTeam,
   adminDeleteTeamCompletely,
@@ -338,58 +340,297 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused 
   </section>;
 }
 
+const NO_GROUP_LABEL = 'Nessun girone';
+
+function adminCanonicalName(value: string) {
+  return value.trim().toLocaleLowerCase('it');
+}
+
+function buildGroupMessage(bundle: TournamentBundle) {
+  const groupByTeam = new Map(bundle.groupTeams.map((membership) => [membership.team_id, membership.group_id]));
+  const blocks = [...bundle.groups]
+    .sort((a,b) => a.sort_order-b.sort_order)
+    .map((group) => [
+      group.name,
+      ...bundle.teams
+        .filter((team) => groupByTeam.get(team.id) === group.id)
+        .sort((a,b) => a.name.localeCompare(b.name,'it'))
+        .map((team) => team.name),
+    ].join('\n'));
+
+  blocks.push([
+    NO_GROUP_LABEL,
+    ...bundle.teams
+      .filter((team) => !groupByTeam.has(team.id))
+      .sort((a,b) => a.name.localeCompare(b.name,'it'))
+      .map((team) => team.name),
+  ].join('\n'));
+
+  return blocks.join('\n\n');
+}
+
+function parseGroupMessage(bundle: TournamentBundle, value: string) {
+  const groupsByName = new Map(bundle.groups.map((group) => [group.name, group]));
+  const teamsByName = new Map(bundle.teams.map((team) => [team.name, team]));
+  const rawBlocks = value.replace(/\r/g,'').split(/\n\s*\n/).map((block) => block.split('\n').map((line) => line.trim()).filter(Boolean)).filter((block) => block.length);
+
+  const teamOccurrences = new Map<string, number>();
+  for (const block of rawBlocks) {
+    for (const line of block.slice(1)) teamOccurrences.set(line, (teamOccurrences.get(line) ?? 0) + 1);
+  }
+
+  const headerOccurrences = new Map<string, number>();
+  for (const block of rawBlocks) headerOccurrences.set(block[0], (headerOccurrences.get(block[0]) ?? 0) + 1);
+
+  const blocks = rawBlocks.map((lines) => {
+    const header = lines[0];
+    const realGroup = groupsByName.get(header);
+    const isNoGroup = header === NO_GROUP_LABEL;
+    const headerValid = Boolean(realGroup) || isNoGroup;
+    return {
+      header,
+      groupId: realGroup?.id ?? (isNoGroup ? null : undefined),
+      headerValid: headerValid && (headerOccurrences.get(header) ?? 0) === 1,
+      teams: lines.slice(1).map((name) => {
+        const team = teamsByName.get(name);
+        const duplicate = (teamOccurrences.get(name) ?? 0) > 1;
+        return { name, teamId: team?.id, valid: Boolean(team) && !duplicate };
+      }),
+    };
+  });
+
+  const missingHeaders = [
+    ...bundle.groups.map((group) => group.name),
+    NO_GROUP_LABEL,
+  ].filter((name) => (headerOccurrences.get(name) ?? 0) !== 1);
+
+  const missingTeams = bundle.teams
+    .filter((team) => (teamOccurrences.get(team.name) ?? 0) !== 1)
+    .map((team) => team.name);
+
+  const unknownHeaders = blocks.filter((block) => !block.headerValid).map((block) => block.header);
+  const invalidTeamLines = blocks.flatMap((block) => block.teams.filter((team) => !team.valid).map((team) => team.name));
+
+  const valid = blocks.length > 0 && missingHeaders.length === 0 && missingTeams.length === 0 && unknownHeaders.length === 0 && invalidTeamLines.length === 0;
+
+  const assignments = valid ? blocks.flatMap((block) => block.teams.map((team) => ({
+    team_id: team.teamId!,
+    group_id: block.groupId ?? null,
+  }))) : [];
+
+  return { blocks, missingHeaders, missingTeams, valid, assignments };
+}
+
+function parseBulkTeams(bundle: TournamentBundle, value: string, requirePin: boolean) {
+  const existing = new Set(bundle.teams.map((team) => adminCanonicalName(team.name)));
+  const raw = value.replace(/\r/g,'').split('\n').map((line) => line.trim()).filter(Boolean);
+  const names = raw.map((line) => adminCanonicalName(line.split('|')[0] ?? ''));
+  const counts = new Map<string,number>();
+  names.forEach((name) => counts.set(name,(counts.get(name)??0)+1));
+
+  const lines = raw.map((rawLine) => {
+    const [namePart, ...pinParts] = rawLine.split('|');
+    const name = (namePart ?? '').trim();
+    const pin = pinParts.join('|').trim();
+    const canonical = adminCanonicalName(name);
+    const duplicateInput = (counts.get(canonical) ?? 0) > 1;
+    const alreadyExists = existing.has(canonical);
+    const missingPin = requirePin && !pin;
+    return {
+      raw: rawLine,
+      name,
+      pin,
+      valid: Boolean(name) && !duplicateInput && !alreadyExists && !missingPin,
+      reason: !name ? 'Nome vuoto' : duplicateInput ? 'Duplicata nel messaggio' : alreadyExists ? 'Squadra già esistente' : missingPin ? 'PIN mancante' : '',
+    };
+  });
+  return { lines, valid: lines.length > 0 && lines.every((line) => line.valid) };
+}
+
 function TeamsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   const [name,setName]=useState('');
-  const [groupId,setGroupId]=useState(bundle.groups[0]?.id ?? '');
+  const [groupId,setGroupId]=useState('');
   const [pin,setPin]=useState('');
+  const [bulkText,setBulkText]=useState('');
+  const [bulkGroupId,setBulkGroupId]=useState('');
   const [busy,setBusy]=useState('');
-  useEffect(()=>{ if(!bundle.groups.some(g=>g.id===groupId)) setGroupId(bundle.groups[0]?.id ?? ''); },[bundle.groups,groupId]);
   const editable=bundle.tournament.phase==='groups' && bundle.tournament.status!=='completed';
+  const groupByTeam=new Map(bundle.groupTeams.map(gt=>[gt.team_id,gt.group_id]));
+  const bulkParsed=useMemo(()=>parseBulkTeams(bundle,bulkText,bundle.settings.team_pin_enabled),[bundle,bulkText]);
 
   async function act(key:string,fn:()=>Promise<unknown>){ setBusy(key);setError('');try{await fn();await refresh();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy('');} }
-  async function add(){ if(!name.trim()||!groupId)return; await act('add',async()=>{await adminAddTeam(bundle.tournament.id,groupId,name,pin||undefined);setName('');setPin('');}); }
+
+  async function add(){
+    if(!name.trim())return;
+    if(bundle.settings.team_pin_enabled&&!pin.trim()){setError('Inserisci il PIN della nuova squadra.');return;}
+    await act('add',async()=>{await adminAddTeam(bundle.tournament.id,groupId||null,name,pin||undefined);setName('');setPin('');});
+  }
+
+  async function addBulk(){
+    if(!bulkParsed.valid)return;
+    await act('bulk-add',async()=>{
+      await adminBulkAddTeams(bundle.tournament.id,bulkGroupId||null,bulkParsed.lines.map((line)=>({name:line.name,pin:line.pin||undefined})));
+      setBulkText('');
+    });
+  }
+
   async function rename(teamId:string,current:string){ const next=window.prompt('Nuovo nome squadra',current); if(next===null||!next.trim()||next.trim()===current)return; await act(teamId,()=>adminRenameTeam(teamId,next)); }
   async function changePin(teamId:string){ const next=window.prompt('Nuovo PIN. Lascia vuoto per rimuoverlo.'); if(next===null)return; await act(`pin-${teamId}`,()=>adminSetTeamPin(teamId,next)); }
-  async function move(teamId:string,currentGroup:string,target:string){ if(!target||target===currentGroup)return; const msg=bundle.tournament.status==='active'?'Spostare questa squadra durante il torneo cancellerà TUTTI i suoi risultati di girone già giocati e creerà le partite nel nuovo girone. Continuare?':'Spostare la squadra nel nuovo girone?'; if(!window.confirm(msg))return; await act(`move-${teamId}`,()=>adminForceMoveTeamToGroup(bundle.tournament.id,teamId,target)); }
+
+  async function move(teamId:string,currentGroup:string,target:string){
+    const nextGroup=target||null;
+    if((currentGroup||null)===nextGroup)return;
+    if(bundle.tournament.status==='active'){
+      const message=nextGroup
+        ? 'Spostare questa squadra durante il torneo cancellerà TUTTI i suoi risultati di girone già giocati e creerà le partite nel nuovo girone. Continuare?'
+        : 'Mettere questa squadra in Nessun girone? Verranno cancellate TUTTE le sue partite e i risultati di girone. La squadra non giocherà finché non verrà riassegnata. Continuare?';
+      if(!window.confirm(message))return;
+    }
+    await act(`move-${teamId}`,()=>adminForceMoveTeamToGroup(bundle.tournament.id,teamId,nextGroup));
+  }
+
   async function withdraw(teamId:string,name:string){ if(!window.confirm(`Ritirare ${name}? I risultati già conclusi restano; le partite non ancora concluse vengono rimosse.`))return; await act(`withdraw-${teamId}`,()=>adminWithdrawTeam(bundle.tournament.id,teamId)); }
   async function restore(teamId:string,name:string){ if(!window.confirm(`Riattivare ${name}? Le partite mancanti verranno aggiunte in fondo alla coda.`))return; await act(`restore-${teamId}`,()=>adminRestoreTeam(bundle.tournament.id,teamId)); }
   async function remove(teamId:string,name:string){ if(!window.confirm(`ELIMINARE COMPLETAMENTE ${name}? Verranno cancellati anche tutti i risultati di girone della squadra e la classifica sarà ricalcolata.`))return; await act(`delete-${teamId}`,()=>adminDeleteTeamCompletely(bundle.tournament.id,teamId)); }
 
-  const groupByTeam=new Map(bundle.groupTeams.map(gt=>[gt.team_id,gt.group_id]));
   return <>
-    <section className="panel team-add-panel"><div className="panel-title"><h2>Aggiungi squadra</h2><span>{bundle.teams.filter(t=>t.status==='active').length} attive</span></div>
-      <div className="team-add-grid"><input placeholder="Nome squadra" value={name} disabled={!editable} onChange={e=>setName(e.target.value)}/><select value={groupId} disabled={!editable} onChange={e=>setGroupId(e.target.value)}>{bundle.groups.map(g=><option value={g.id} key={g.id}>{g.name}</option>)}</select>{bundle.settings.team_pin_enabled&&<input placeholder="PIN" value={pin} disabled={!editable} onChange={e=>setPin(e.target.value)}/>}<button className="button primary" disabled={!editable||!name.trim()||!groupId||busy==='add'} onClick={()=>void add()}>＋ Aggiungi</button></div>
-      {bundle.tournament.status==='active'&&<p className="hint">Una squadra aggiunta a torneo avviato riceve le nuove partite in fondo alla coda: l'ordine già esistente non viene toccato.</p>}
-      {!editable&&<div className="alert warning compact">La struttura delle squadre è bloccata dopo l'inizio del tabellone eliminatorio.</div>}
+    <section className="panel team-add-panel">
+      <div className="panel-title"><h2>Aggiungi squadra</h2><span>{bundle.teams.filter(t=>t.status==='active').length} attive</span></div>
+      <div className="team-add-grid">
+        <input placeholder="Nome squadra" value={name} disabled={!editable} onChange={e=>setName(e.target.value)}/>
+        <select value={groupId} disabled={!editable} onChange={e=>setGroupId(e.target.value)}>
+          <option value="">Nessun girone</option>
+          {bundle.groups.map(g=><option value={g.id} key={g.id}>{g.name}</option>)}
+        </select>
+        {bundle.settings.team_pin_enabled&&<input placeholder="PIN" value={pin} disabled={!editable} onChange={e=>setPin(e.target.value)}/>}
+        <button className="button primary" disabled={!editable||!name.trim()||busy==='add'||(bundle.settings.team_pin_enabled&&!pin.trim())} onClick={()=>void add()}>＋ Aggiungi</button>
+      </div>
+      <p className="hint">Se scegli <strong>Nessun girone</strong>, la squadra viene salvata ma non entra nel calendario e non può essere scelta dai giocatori.</p>
     </section>
-    <section className="panel"><div className="panel-title"><h2>{bundle.teams.length} squadre</h2><span>controllo admin</span></div><div className="team-admin-list">{bundle.teams.map(t=>{const currentGroup=groupByTeam.get(t.id)??'';return <div className={`team-admin-row ${t.status==='withdrawn'?'withdrawn':''}`} key={t.id}><button className="team-name-button" disabled={busy.includes(t.id)} onClick={()=>void rename(t.id,t.name)}>{t.name}</button><select value={currentGroup} disabled={!editable||t.status==='withdrawn'||busy.includes(t.id)} onChange={e=>void move(t.id,currentGroup,e.target.value)}>{bundle.groups.map(g=><option value={g.id} key={g.id}>{g.name}</option>)}</select><span className={`status-pill ${t.status}`}>{t.status}</span><div className="team-row-actions"><button disabled={busy.includes(t.id)} onClick={()=>void changePin(t.id)}>PIN</button>{t.status==='active'?<button disabled={!editable||busy.includes(t.id)} onClick={()=>void withdraw(t.id,t.name)}>Ritira</button>:<button disabled={!editable||busy.includes(t.id)} onClick={()=>void restore(t.id,t.name)}>Riattiva</button>}<button className="danger-soft" disabled={!editable||busy.includes(t.id)} onClick={()=>void remove(t.id,t.name)}>Elimina</button></div></div>})}</div></section>
+
+    <section className="panel bulk-team-panel">
+      <div className="panel-title"><h2>Aggiungi più squadre</h2><span>una per riga</span></div>
+      <p className="hint">Scrivi o incolla le squadre come un messaggio. {bundle.settings.team_pin_enabled ? 'Formato: Nome squadra | PIN' : 'Una squadra per ogni riga.'}</p>
+      <textarea value={bulkText} disabled={!editable} onChange={(e)=>setBulkText(e.target.value)} placeholder={bundle.settings.team_pin_enabled ? 'Team 1 | 1234\nTeam 2 | 5678\nTeam 3 | 9012' : 'Team 1\nTeam 2\nTeam 3'} rows={7}/>
+      {bulkText.trim()&&<div className="bulk-team-preview">{bulkParsed.lines.map((line,index)=><div className={line.valid?'valid':'invalid'} key={`${line.raw}-${index}`}><span>{line.name||line.raw}</span>{line.valid?<strong>OK</strong>:<strong>{line.reason}</strong>}</div>)}</div>}
+      <div className="bulk-team-actions">
+        <label>Inserisci in
+          <select value={bulkGroupId} disabled={!editable} onChange={(e)=>setBulkGroupId(e.target.value)}>
+            <option value="">Nessun girone</option>
+            {bundle.groups.map((g)=><option value={g.id} key={g.id}>{g.name}</option>)}
+          </select>
+        </label>
+        <button className="button primary" disabled={!editable||!bulkParsed.valid||busy==='bulk-add'} onClick={()=>void addBulk()}>{busy==='bulk-add'?'Aggiunta…':`AGGIUNGI ${bulkParsed.lines.length||''} SQUADRE`}</button>
+      </div>
+    </section>
+
+    {bundle.tournament.status==='active'&&<p className="hint">Una squadra aggiunta a torneo avviato e assegnata a un girone riceve le nuove partite in fondo alla coda. Una squadra senza girone resta fuori dal torneo.</p>}
+    {!editable&&<div className="alert warning compact">La struttura delle squadre è bloccata dopo l'inizio del tabellone eliminatorio.</div>}
+
+    <section className="panel"><div className="panel-title"><h2>{bundle.teams.length} squadre</h2><span>{bundle.teams.filter((team)=>!groupByTeam.has(team.id)).length} senza girone</span></div>
+      <div className="team-admin-list">{bundle.teams.map(t=>{const currentGroup=groupByTeam.get(t.id)??'';return <div className={`team-admin-row ${t.status==='withdrawn'?'withdrawn':''}`} key={t.id}>
+        <button className="team-name-button" disabled={busy.includes(t.id)} onClick={()=>void rename(t.id,t.name)}>{t.name}</button>
+        <select value={currentGroup} disabled={!editable||t.status==='withdrawn'||busy.includes(t.id)} onChange={e=>void move(t.id,currentGroup,e.target.value)}>
+          <option value="">Nessun girone</option>
+          {bundle.groups.map(g=><option value={g.id} key={g.id}>{g.name}</option>)}
+        </select>
+        <span className={`status-pill ${t.status}`}>{currentGroup?'nel torneo':'fuori girone'}</span>
+        <div className="team-row-actions"><button disabled={busy.includes(t.id)} onClick={()=>void changePin(t.id)}>PIN</button>{t.status==='active'?<button disabled={!editable||busy.includes(t.id)} onClick={()=>void withdraw(t.id,t.name)}>Ritira</button>:<button disabled={!editable||busy.includes(t.id)||!currentGroup} onClick={()=>void restore(t.id,t.name)}>Riattiva</button>}<button className="danger-soft" disabled={!editable||busy.includes(t.id)} onClick={()=>void remove(t.id,t.name)}>Elimina</button></div>
+      </div>})}</div>
+    </section>
   </>;
 }
 
 function GroupsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   const [busy, setBusy] = useState('');
-  async function move(teamId: string, groupId: string) {
-    const current=bundle.groupTeams.find(gt=>gt.team_id===teamId)?.group_id;
-    if(!current||current===groupId)return;
-    if(bundle.tournament.status==='active'&&!window.confirm('Spostare una squadra a torneo avviato cancella tutti i suoi risultati di girone e genera le nuove partite nel girone di destinazione. Continuare?'))return;
+  const [layoutText,setLayoutText]=useState(()=>buildGroupMessage(bundle));
+  const [layoutDirty,setLayoutDirty]=useState(false);
+  const parsed=useMemo(()=>parseGroupMessage(bundle,layoutText),[bundle,layoutText]);
+
+  useEffect(()=>{
+    if(!layoutDirty)setLayoutText(buildGroupMessage(bundle));
+  },[bundle,layoutDirty]);
+
+  async function move(teamId: string, groupId: string | null) {
+    const current=bundle.groupTeams.find(gt=>gt.team_id===teamId)?.group_id??null;
+    if(current===groupId)return;
+    if(bundle.tournament.status==='active'){
+      const msg=groupId
+        ? 'Spostare una squadra a torneo avviato cancella tutti i suoi risultati di girone e genera le nuove partite nel girone di destinazione. Continuare?'
+        : 'Mettere la squadra in Nessun girone cancella tutte le sue partite e i risultati di girone. Continuare?';
+      if(!window.confirm(msg))return;
+    }
     setBusy(teamId); setError('');
     try { await adminForceMoveTeamToGroup(bundle.tournament.id, teamId, groupId); await refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(''); }
   }
-  return <div className="group-admin-grid">{bundle.groups.map((g) => <GroupAdminCard key={g.id} group={g} bundle={bundle} busy={busy} move={move} refresh={refresh} setError={setError} />)}</div>;
+
+  async function applyLayout(){
+    if(!parsed.valid)return;
+    if(bundle.tournament.status==='active'&&!window.confirm('Aggiornare la composizione dei gironi? Ogni squadra spostata perderà le precedenti partite e i risultati di girone. Continuare?'))return;
+    setBusy('layout');setError('');
+    try{
+      await adminApplyGroupLayout(bundle.tournament.id,parsed.assignments);
+      await refresh();
+      setLayoutDirty(false);
+    }catch(e){setError(e instanceof Error?e.message:String(e));}
+    finally{setBusy('');}
+  }
+
+  const groupByTeam=new Map(bundle.groupTeams.map((membership)=>[membership.team_id,membership.group_id]));
+  const unassigned=bundle.teams.filter((team)=>!groupByTeam.has(team.id));
+
+  return <>
+    <section className="panel group-message-editor">
+      <div className="panel-title"><h2>Composizione gironi</h2><span>editor rapido</span></div>
+      <p className="hint">La prima riga di ogni blocco è il <strong>nome esistente del girone</strong>. Non può essere rinominato qui. Lascia una riga vuota tra i gironi. Usa <strong>Nessun girone</strong> per le squadre che non devono giocare.</p>
+      <textarea value={layoutText} disabled={busy==='layout'||bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'} onChange={(e)=>{setLayoutText(e.target.value);setLayoutDirty(true);}} rows={Math.min(28,Math.max(12,layoutText.split('\n').length+1))}/>
+
+      <div className="group-message-preview">
+        {parsed.blocks.map((block,index)=><div className="group-message-block" key={`${block.header}-${index}`}>
+          <strong className={block.headerValid?'valid':'invalid'}>{block.header}</strong>
+          {block.teams.map((team,teamIndex)=><span className={team.valid&&block.headerValid?'valid':'invalid'} key={`${team.name}-${teamIndex}`}>{team.name}</span>)}
+        </div>)}
+      </div>
+
+      {!parsed.valid&&layoutText.trim()&&<div className="group-validation-errors">
+        {parsed.missingHeaders.length>0&&<div><strong>Gironi/sezioni mancanti o duplicati:</strong> {parsed.missingHeaders.join(', ')}</div>}
+        {parsed.missingTeams.length>0&&<div><strong>Squadre mancanti, duplicate o scritte male:</strong> {parsed.missingTeams.join(', ')}</div>}
+      </div>}
+
+      <div className="group-message-actions">
+        <button className="button secondary" disabled={!layoutDirty||busy==='layout'} onClick={()=>{setLayoutText(buildGroupMessage(bundle));setLayoutDirty(false);}}>Ripristina</button>
+        <button className="button primary" disabled={!layoutDirty||!parsed.valid||busy==='layout'||bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'} onClick={()=>void applyLayout()}>{busy==='layout'?'Aggiornamento…':'AGGIORNA GIRONI'}</button>
+      </div>
+    </section>
+
+    <div className="group-admin-grid">{bundle.groups.map((g) => <GroupAdminCard key={g.id} group={g} bundle={bundle} busy={busy} move={move} refresh={refresh} setError={setError} />)}</div>
+
+    <section className="panel no-group-card">
+      <div className="panel-title"><h2>Nessun girone</h2><span>{unassigned.length} squadre</span></div>
+      <p className="hint">Queste squadre esistono nell'admin, ma non partecipano al calendario e non sono selezionabili dall'app giocatori.</p>
+      {unassigned.length===0&&<div className="empty-state compact">Nessuna squadra fuori dai gironi.</div>}
+      {unassigned.map((team)=><div className="group-team-editor" key={team.id}><strong>{team.name}</strong><select value="" disabled={bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'||team.status==='withdrawn'||busy===team.id} onChange={(e)=>void move(team.id,e.target.value||null)}><option value="">Nessun girone</option>{bundle.groups.map((target)=><option value={target.id} key={target.id}>{target.name}</option>)}</select></div>)}
+    </section>
+  </>;
 }
 
-function GroupAdminCard({ group, bundle, busy, move, refresh, setError }: { group: TournamentBundle['groups'][number]; bundle: TournamentBundle; busy: string; move: (teamId:string, groupId:string)=>Promise<void>; refresh:()=>Promise<void>; setError:(s:string)=>void }) {
+function GroupAdminCard({ group, bundle, busy, move, refresh, setError }: { group: TournamentBundle['groups'][number]; bundle: TournamentBundle; busy: string; move: (teamId:string, groupId:string|null)=>Promise<void>; refresh:()=>Promise<void>; setError:(s:string)=>void }) {
   const [name, setName] = useState(group.name);
+  const [editingName,setEditingName]=useState(false);
   const [renaming, setRenaming] = useState(false);
-  useEffect(() => setName(group.name), [group.name]);
+  useEffect(() => {setName(group.name);setEditingName(false);}, [group.name]);
 
   async function rename() {
     const clean = name.trim();
-    if (!clean || clean === group.name) { setName(group.name); return; }
+    if (!clean || clean === group.name) { setName(group.name); setEditingName(false); return; }
+    if(bundle.groups.some((other)=>other.id!==group.id&&adminCanonicalName(other.name)===adminCanonicalName(clean))){
+      setError('Esiste già un girone con questo nome.');
+      return;
+    }
     setRenaming(true); setError('');
-    try { await adminRenameGroup(group.id, clean); await refresh(); }
+    try { await adminRenameGroup(group.id, clean); await refresh(); setEditingName(false); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); setName(group.name); }
     finally { setRenaming(false); }
   }
@@ -397,13 +638,10 @@ function GroupAdminCard({ group, bundle, busy, move, refresh, setError }: { grou
   const memberships = bundle.groupTeams.filter((gt)=>gt.group_id===group.id);
   return <section className="panel">
     <div className="panel-title group-title-editor">
-      <div className="group-name-edit">
-        <input aria-label={`Nome ${group.name}`} value={name} disabled={renaming} onChange={(e)=>setName(e.target.value)} onBlur={()=>void rename()} onKeyDown={(e)=>{ if(e.key==='Enter') (e.currentTarget as HTMLInputElement).blur(); if(e.key==='Escape') setName(group.name); }} />
-        <span className="hint">clicca per rinominare</span>
-      </div>
+      {!editingName?<div className="group-name-display"><h2>{group.name}</h2><button title="Modifica nome girone" aria-label={`Modifica nome ${group.name}`} onClick={()=>setEditingName(true)}>✎</button></div>:<div className="group-name-rename"><input autoFocus value={name} disabled={renaming} onChange={(e)=>setName(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')void rename();if(e.key==='Escape'){setName(group.name);setEditingName(false);}}}/><button disabled={renaming} onClick={()=>void rename()}>Salva</button><button disabled={renaming} onClick={()=>{setName(group.name);setEditingName(false);}}>Annulla</button></div>}
       <span>{memberships.length} squadre</span>
     </div>
-    {memberships.map((gt) => { const team = bundle.teams.find((t)=>t.id===gt.team_id); return <div className="group-team-editor" key={gt.id}><strong>{team?.name}</strong><select disabled={bundle.tournament.phase !== 'groups' || bundle.tournament.status === 'completed' || team?.status==='withdrawn' || busy===gt.team_id} value={group.id} onChange={(e)=>void move(gt.team_id,e.target.value)}>{bundle.groups.map((target)=><option value={target.id} key={target.id}>{target.name}</option>)}</select></div>; })}
+    {memberships.map((gt) => { const team = bundle.teams.find((t)=>t.id===gt.team_id); return <div className="group-team-editor" key={gt.id}><strong>{team?.name}</strong><select disabled={bundle.tournament.phase !== 'groups' || bundle.tournament.status === 'completed' || team?.status==='withdrawn' || busy===gt.team_id} value={group.id} onChange={(e)=>void move(gt.team_id,e.target.value||null)}><option value="">Nessun girone</option>{bundle.groups.map((target)=><option value={target.id} key={target.id}>{target.name}</option>)}</select></div>; })}
   </section>;
 }
 

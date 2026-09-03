@@ -518,3 +518,48 @@ button:disabled { cursor:not-allowed; }
   .admin-match-inline-actions { flex-wrap:wrap; }
   .score-mini { width:100%; }
 }
+
+
+/* Step 11.1: bulk teams + message group editor */
+.bulk-team-panel textarea,.group-message-editor textarea { width:100%; resize:vertical; border:1px solid #d8d8d2; border-radius:13px; background:#fbfbf8; padding:14px; font:500 13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.bulk-team-preview { display:grid; gap:4px; margin-top:10px; }
+.bulk-team-preview>div { display:flex; justify-content:space-between; gap:12px; padding:7px 9px; border-radius:8px; font-size:11px; }
+.bulk-team-preview .valid { background:#edf7ee; color:#285d30; }
+.bulk-team-preview .invalid { background:#fff0ed; color:#9a3024; }
+.bulk-team-preview strong { font-size:9px; text-transform:uppercase; }
+.bulk-team-actions { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-top:13px; }
+.bulk-team-actions label { display:grid; gap:5px; min-width:220px; }
+.bulk-team-actions select { padding:10px 11px; border:1px solid #ddd; border-radius:9px; background:#fff; }
+
+.group-message-editor { margin-top:0!important; }
+.group-message-preview { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin-top:12px; }
+.group-message-block { min-width:0; border:1px solid #e5e5df; border-radius:11px; overflow:hidden; background:#fafaf7; }
+.group-message-block>* { display:block; padding:7px 9px; border-bottom:1px solid #ecece6; overflow-wrap:anywhere; }
+.group-message-block>*:last-child { border-bottom:0; }
+.group-message-block>strong { font-size:11px; background:#eeeeea; }
+.group-message-block span { font-size:11px; }
+.group-message-block .valid { color:#222; }
+.group-message-block .invalid { background:#ffe8e4; color:#a2281c; font-weight:850; }
+.group-message-block>strong.invalid { background:#e24332; color:#fff; }
+.group-validation-errors { display:grid; gap:5px; margin-top:11px; padding:11px 12px; border-radius:10px; background:#fff0ed; color:#8d2b21; font-size:11px; line-height:1.4; }
+.group-message-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:13px; }
+.group-name-display { display:flex; align-items:center; gap:8px; min-width:0; }
+.group-name-display h2 { margin:0; font-size:20px; }
+.group-name-display button { width:30px; height:30px; border:1px solid #ddd; background:#fafafa; border-radius:8px; font-size:14px; }
+.group-name-rename { display:flex; align-items:center; gap:5px; min-width:0; flex:1; }
+.group-name-rename input { min-width:120px; flex:1; padding:8px 9px; border:1px solid #ccc; border-radius:8px; font-weight:800; }
+.group-name-rename button { border:1px solid #ddd; background:#fafafa; border-radius:8px; padding:8px 9px; font-size:10px; font-weight:800; }
+.no-group-card { margin-top:16px!important; }
+.status-pill { white-space:nowrap; }
+
+@media (max-width:900px) {
+  .group-message-preview { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:620px) {
+  .bulk-team-actions { align-items:stretch; flex-direction:column; }
+  .bulk-team-actions label,.bulk-team-actions button { width:100%; min-width:0; }
+  .group-message-preview { grid-template-columns:1fr; }
+  .group-message-actions { display:grid; grid-template-columns:1fr 1fr; }
+  .group-name-rename { flex-wrap:wrap; }
+  .group-name-rename input { width:100%; flex-basis:100%; }
+}

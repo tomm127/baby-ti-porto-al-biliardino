@@ -440,13 +440,45 @@ export async function adminSetTeamPin(teamId: string, pin: string) {
   if (error) throw error;
 }
 
-export async function adminAddTeam(tournamentId: string, groupId: string, name: string, pin?: string) {
+export async function adminAddTeam(tournamentId: string, groupId: string | null, name: string, pin?: string) {
   const before = await loadTournamentBundleById(tournamentId);
   const { data, error } = await client().rpc('admin_add_team', { p_tournament_id: tournamentId, p_group_id: groupId, p_name: name.trim(), p_pin: pin?.trim() || null });
   if (error) throw error;
   if (before.tournament.status === 'draft') await regenerateGroupSchedule(tournamentId);
   else await dispatchPushNonFatal();
   return String(data);
+}
+
+export async function adminBulkAddTeams(
+  tournamentId: string,
+  groupId: string | null,
+  teams: { name: string; pin?: string }[],
+) {
+  const before = await loadTournamentBundleById(tournamentId);
+  const { data, error } = await client().rpc('admin_bulk_add_teams', {
+    p_tournament_id: tournamentId,
+    p_group_id: groupId,
+    p_teams: teams.map((team) => ({ name: team.name.trim(), pin: team.pin?.trim() || null })),
+  });
+  if (error) throw error;
+  if (before.tournament.status === 'draft') await regenerateGroupSchedule(tournamentId);
+  else await dispatchPushNonFatal();
+  return Number(data ?? 0);
+}
+
+export async function adminApplyGroupLayout(
+  tournamentId: string,
+  assignments: { team_id: string; group_id: string | null }[],
+) {
+  const before = await loadTournamentBundleById(tournamentId);
+  const { data, error } = await client().rpc('admin_apply_group_layout', {
+    p_tournament_id: tournamentId,
+    p_assignments: assignments,
+  });
+  if (error) throw error;
+  if (before.tournament.status === 'draft') await regenerateGroupSchedule(tournamentId);
+  else await dispatchPushNonFatal();
+  return Number(data ?? 0);
 }
 
 export async function adminWithdrawTeam(tournamentId: string, teamId: string) {
@@ -475,7 +507,7 @@ export async function adminDeleteTeamCompletely(tournamentId: string, teamId: st
   else await dispatchPushNonFatal();
 }
 
-export async function adminForceMoveTeamToGroup(tournamentId: string, teamId: string, groupId: string) {
+export async function adminForceMoveTeamToGroup(tournamentId: string, teamId: string, groupId: string | null) {
   const before = await loadTournamentBundleById(tournamentId);
   const { data, error } = await client().rpc('admin_force_move_team_group', { p_team_id: teamId, p_group_id: groupId });
   if (error) throw error;
