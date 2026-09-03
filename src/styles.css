@@ -406,3 +406,115 @@ button:disabled { cursor:not-allowed; }
 @media (min-width:780px) {
   .player-live-fields { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
+
+
+/* Step 11: Admin v2 + emergency pause */
+.admin-v2 .brand { font-size:26px; line-height:.9; }
+.admin-menu-button { display:none; border:0; background:#fff; width:42px; height:42px; border-radius:11px; font-size:22px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+.admin-title-block { min-width:0; }
+.live-badge.paused { background:#fff0cd; color:#735300; }
+.admin-emergency-bar { margin-bottom:16px; background:#fff; border:1px solid #e4e0d7; border-radius:18px; padding:17px 18px; display:flex; justify-content:space-between; align-items:center; gap:18px; }
+.admin-emergency-bar>div { display:grid; gap:3px; }
+.admin-emergency-bar>div>span { font-size:9px; letter-spacing:.14em; font-weight:950; color:#9a6c00; }
+.admin-emergency-bar>div>strong { font-size:18px; }
+.admin-emergency-bar>div>small { color:#777; }
+.admin-emergency-bar.active { background:#2a2110; color:#fff; border-color:#6d5320; }
+.admin-emergency-bar.active small { color:#d2c49e; }
+.emergency-pause-button { background:#2c1816; color:#fff; }
+.resume-tournament { background:#ffd033; color:#171717; }
+.admin-emergency-confirm { margin:-6px 0 16px; background:#fff5f1; border:1px solid #ebc9bd; border-radius:16px; padding:17px; display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.admin-emergency-confirm>div:first-child { display:grid; gap:5px; }
+.admin-emergency-confirm span { color:#765f58; font-size:12px; max-width:720px; }
+.admin-emergency-confirm>div:last-child { display:flex; gap:7px; flex:none; }
+.admin-emergency-confirm button { border:1px solid #ddd; border-radius:9px; background:#fff; padding:9px 11px; font-weight:800; }
+.admin-emergency-confirm .confirm-danger { background:#2c1816; color:#fff; border-color:#2c1816; }
+.admin-dashboard-stats { margin-top:0; }
+.admin-dashboard-stats>div { background:#fff; }
+.admin-live-fields { margin-bottom:16px; }
+.admin-field-paused { outline:2px solid #c58c1c; }
+.admin-field-result { display:grid; gap:7px; margin-top:12px; padding-top:12px; border-top:1px solid #eee; }
+.admin-field-result>span { font-size:10px; font-weight:900; color:#777; text-transform:uppercase; }
+.admin-field-result>div { display:grid; grid-template-columns:60px auto 60px 1fr; align-items:center; gap:6px; }
+.admin-field-result input { width:60px; padding:8px; border:1px solid #ddd; border-radius:8px; }
+.admin-field-result button { border:0; border-radius:8px; background:#111; color:#fff; padding:9px; font-weight:800; }
+.admin-queue-panel { margin-top:0!important; }
+.admin-queue-row { grid-template-columns:24px 34px minmax(200px,1fr) auto; }
+.queue-drag { cursor:grab; font-weight:950; color:#aaa; letter-spacing:-.15em; user-select:none; }
+.admin-queue-row.dragging { opacity:.45; background:#f3f0e8; }
+.queue-match-copy { display:grid; gap:2px; }
+.queue-match-copy small { font-size:9px; color:#888; font-weight:850; text-transform:uppercase; }
+
+.admin-match-filters { margin-top:0!important; }
+.admin-match-filter-grid { display:grid; grid-template-columns:minmax(240px,1.5fr) minmax(160px,.7fr) minmax(160px,.7fr); gap:10px; margin-top:16px; }
+.admin-match-filter-grid label { display:grid; gap:5px; }
+.admin-match-filter-grid label>span { font-size:10px; color:#777; font-weight:850; text-transform:uppercase; }
+.admin-match-filter-grid input,.admin-match-filter-grid select { width:100%; padding:11px 12px; border:1px solid #ddd; border-radius:10px; background:#fff; }
+.admin-match-filter-bottom { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:12px; }
+.admin-checkboxes { display:flex; gap:15px; flex-wrap:wrap; }
+.admin-checkboxes label { display:flex; align-items:center; gap:7px; font-size:12px; }
+.admin-view-toggle { display:flex; padding:3px; border-radius:10px; background:#eeeeea; }
+.admin-view-toggle button { border:0; background:transparent; border-radius:8px; padding:8px 11px; font-size:11px; font-weight:800; color:#777; }
+.admin-view-toggle button.active { background:#fff; color:#111; box-shadow:0 1px 5px rgba(0,0,0,.08); }
+.admin-match-section { margin-top:12px!important; }
+.admin-match-row-v2 { grid-template-columns:minmax(260px,1fr) minmax(310px,auto); }
+.admin-match-main { display:grid; gap:6px; min-width:0; }
+.admin-match-main>strong { font-size:15px; overflow-wrap:anywhere; }
+.admin-match-main em { font-style:normal; color:#aaa; font-size:.8em; }
+.admin-match-meta { display:flex; align-items:center; gap:7px; flex-wrap:wrap; color:#888; font-size:9px; font-weight:800; text-transform:uppercase; }
+.admin-match-meta>span:not(.status-mini) { padding-left:7px; border-left:1px solid #ddd; }
+.admin-match-actions-v2 { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+.admin-match-inline-actions { display:flex; align-items:center; gap:5px; }
+.admin-match-inline-actions select,.admin-match-inline-actions button { border:1px solid #ddd; border-radius:8px; background:#fafafa; padding:8px; font-size:11px; }
+.admin-match-inline-actions .danger-soft { background:#fff0ee; }
+.status-mini.status-playing,.status-mini.status-called,.status-mini.status-ready { color:#28603a; }
+.status-mini.status-awaiting_result { color:#8b5b00; }
+.status-mini.status-cancelled { color:#a1493d; }
+
+.admin-mobile-backdrop { display:none; }
+.tournament-paused-overlay { position:fixed; inset:0; z-index:80; background:rgba(247,244,232,.94); backdrop-filter:blur(7px); display:grid; place-items:center; padding:24px; text-align:center; }
+.tournament-paused-overlay>div { display:grid; place-items:center; gap:8px; }
+.tournament-paused-overlay span { font-size:54px; line-height:1; color:#b17a00; }
+.tournament-paused-overlay strong { font-size:clamp(34px,9vw,62px); line-height:.95; letter-spacing:-.05em; }
+.tournament-paused-overlay p { margin:0; color:#777; font-size:16px; }
+.tournament-paused-overlay.dark { background:rgba(13,13,13,.95); color:#fff; }
+.tournament-paused-overlay.dark p { color:#aaa; }
+
+@media (max-width:900px) {
+  .admin-v2 { grid-template-columns:1fr; }
+  .admin-v2 .admin-main { padding:18px; }
+  .admin-v2 .sidebar { display:flex; position:fixed; inset:0 auto 0 0; width:min(300px,84vw); z-index:100; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 50px rgba(0,0,0,.25); }
+  .admin-v2 .sidebar.mobile-open { transform:translateX(0); }
+  .admin-mobile-backdrop { display:block; position:fixed; inset:0; z-index:90; border:0; background:rgba(0,0,0,.38); }
+  .admin-menu-button { display:block; flex:none; }
+  .admin-v2 .admin-top { flex-direction:row; align-items:center; }
+  .admin-v2 .admin-top-actions { margin-left:auto; width:auto; min-width:0; }
+  .admin-v2 .admin-top-actions select { max-width:240px; }
+  .admin-match-filter-grid { grid-template-columns:1fr 1fr; }
+  .admin-search-field { grid-column:1/-1; }
+  .admin-match-row-v2 { grid-template-columns:1fr; }
+  .admin-match-actions-v2 { justify-content:flex-start; }
+}
+
+@media (max-width:620px) {
+  .admin-v2 .admin-main { padding:12px; }
+  .admin-v2 .admin-top { gap:9px; margin-bottom:14px; }
+  .admin-v2 .admin-top h1 { font-size:27px; }
+  .admin-title-block .eyebrow { max-width:140px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .admin-v2 .admin-top-actions select { max-width:130px; font-size:11px; padding:8px; }
+  .admin-v2 .live-badge { display:none; }
+  .admin-emergency-bar,.admin-emergency-confirm { align-items:stretch; flex-direction:column; }
+  .admin-emergency-bar button { width:100%; }
+  .admin-emergency-confirm>div:last-child { width:100%; }
+  .admin-emergency-confirm>div:last-child button { flex:1; }
+  .admin-dashboard-stats { grid-template-columns:repeat(2,1fr); }
+  .admin-queue-row { grid-template-columns:22px 28px minmax(0,1fr); }
+  .admin-queue-row .queue-controls { grid-column:2/-1; }
+  .queue-match-copy strong { font-size:12px; }
+  .admin-match-filter-grid { grid-template-columns:1fr; }
+  .admin-search-field { grid-column:auto; }
+  .admin-match-filter-bottom { align-items:stretch; flex-direction:column; }
+  .admin-view-toggle button { flex:1; }
+  .admin-match-actions-v2,.admin-match-inline-actions { width:100%; }
+  .admin-match-inline-actions { flex-wrap:wrap; }
+  .score-mini { width:100%; }
+}

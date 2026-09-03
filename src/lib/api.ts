@@ -24,6 +24,8 @@ export interface TournamentSettingsRow {
   third_place_enabled: boolean;
   pause_enabled: boolean;
   team_pin_enabled: boolean;
+  emergency_paused: boolean;
+  emergency_paused_at: string | null;
 }
 
 export interface TeamRow {
@@ -387,6 +389,16 @@ export async function submitMatchResult(matchId: string, scoreTeam1: number, sco
 }
 
 
+
+export async function adminSetEmergencyPause(tournamentId: string, paused: boolean) {
+  const { data, error } = await client().rpc('admin_set_emergency_pause', {
+    p_tournament_id: tournamentId,
+    p_paused: paused,
+  });
+  if (error) throw error;
+  await dispatchPushNonFatal();
+  return Boolean(data);
+}
 
 export async function adminReorderQueue(tournamentId: string, orderedMatchIds: string[]) {
   const { data, error } = await client().rpc('admin_reorder_queue', { p_tournament_id: tournamentId, p_match_ids: orderedMatchIds });

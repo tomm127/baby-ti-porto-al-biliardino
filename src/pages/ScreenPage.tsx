@@ -117,6 +117,7 @@ export function ScreenPage({ slug }: { slug: string }) {
   </div>;
 
   return <main className="screen-mode tv-v2">
+    {bundle.settings.emergency_paused && <div className="tv-tournament-pause"><div><span>Ⅱ</span><strong>TORNEO IN PAUSA</strong><p>Attendere indicazioni dell'organizzazione</p></div></div>}
     <ConnectionBanner online={online} cachedAt={cachedAt} />
 
     <header className="tv-header">

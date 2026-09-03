@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   adminGenerateKnockout,
+  adminSetEmergencyPause,
   adminAddTeam,
   adminWithdrawTeam,
   adminRestoreTeam,
@@ -93,6 +94,7 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const refreshList = useCallback(async () => {
     const items = await listAdminTournaments();
@@ -131,22 +133,39 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
   }
 
   const selected = tournaments.find((t) => t.id === selectedId);
+  const navItems: [AdminTab,string][] = [
+    ['live','Dashboard'],
+    ['matches','Partite'],
+    ['teams','Squadre'],
+    ['groups','Gironi'],
+    ['bracket','Tabellone'],
+    ['fields','Campi'],
+    ['settings','Impostazioni'],
+  ];
 
-  return <main className="admin-shell">
-    <aside className="sidebar">
-      <div className="brand">BABY<br/><span>BILIARDINO</span></div>
-      {([['live','Live'],['teams','Squadre'],['groups','Gironi'],['bracket','Tabellone'],['matches','Partite'],['fields','Campi'],['settings','Impostazioni']] as [AdminTab,string][]).map(([key,label]) => <button className={tab === key ? 'side-link active' : 'side-link'} key={key} onClick={() => { setCreating(false); setTab(key); }}>{label}</button>)}
+  function goTo(key: AdminTab) {
+    setCreating(false);
+    setTab(key);
+    setMobileMenuOpen(false);
+  }
+
+  return <main className="admin-shell admin-v2">
+    {mobileMenuOpen && <button className="admin-mobile-backdrop" aria-label="Chiudi menu" onClick={() => setMobileMenuOpen(false)} />}
+    <aside className={mobileMenuOpen ? 'sidebar mobile-open' : 'sidebar'}>
+      <div className="brand">BTPB<br/><span>ADMIN</span></div>
+      {navItems.map(([key,label]) => <button className={tab === key && !creating ? 'side-link active' : 'side-link'} key={key} onClick={() => goTo(key)}>{label}</button>)}
       <div className="sidebar-spacer" />
-      <button className="side-link" onClick={() => setCreating(true)}>＋ Nuovo torneo</button>
+      <button className="side-link" onClick={() => { setCreating(true); setMobileMenuOpen(false); }}>＋ Nuovo torneo</button>
       <button className="side-link" onClick={() => void logout()}>Esci admin</button>
     </aside>
 
     <section className="admin-main">
       <header className="admin-top">
-        <div>{selected && <div className="eyebrow">{selected.name}</div>}<h1>{creating ? 'Nuovo torneo' : tabTitle(tab)}</h1></div>
+        <button className="admin-menu-button" aria-label="Apri menu" onClick={() => setMobileMenuOpen(true)}>☰</button>
+        <div className="admin-title-block">{selected && <div className="eyebrow">{selected.name}</div>}<h1>{creating ? 'Nuovo torneo' : tabTitle(tab)}</h1></div>
         <div className="admin-top-actions">
           {!creating && tournaments.length > 0 && <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>{tournaments.map((t) => <option value={t.id} key={t.id}>{t.name} · {t.status}</option>)}</select>}
-          {bundle?.tournament.status === 'active' && <span className="live-badge">● LIVE</span>}
+          {bundle?.tournament.status === 'active' && <span className={bundle.settings.emergency_paused ? 'live-badge paused' : 'live-badge'}>{bundle.settings.emergency_paused ? 'Ⅱ PAUSA' : '● LIVE'}</span>}
         </div>
       </header>
 
@@ -172,10 +191,20 @@ function AdminTabContent({ tab, bundle, refresh, setError }: { tab: AdminTab; bu
 
 function LiveAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   const [busy, setBusy] = useState('');
+  const [pauseConfirm, setPauseConfirm] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const liveMatches = bundle.matches.filter((m) => ['called','ready','playing','awaiting_result'].includes(m.status));
   const queue = bundle.matches.filter((m) => m.status === 'queued').sort((a,b) => (a.queue_position ?? 999999) - (b.queue_position ?? 999999));
   const matchByField = new Map(liveMatches.filter((m) => m.field_id).map((m) => [m.field_id!, m]));
   const freeFields = bundle.fields.filter((f) => f.is_active && !matchByField.has(f.id));
+  const tournamentPaused = bundle.settings.emergency_paused;
+
+  const completedMatches = bundle.matches.filter((m) => ['finished','forfeit'].includes(m.status)).length;
+  const activeTeams = bundle.teams.filter((t) => t.status === 'active').length;
+  const completedGroups = bundle.groups.filter((group) => {
+    const matches = bundle.matches.filter((m) => m.group_id === group.id && m.status !== 'cancelled');
+    return matches.length > 0 && matches.every((m) => ['finished','forfeit'].includes(m.status));
+  }).length;
 
   async function act(key: string, fn: () => Promise<unknown>) {
     setBusy(key); setError('');
@@ -190,21 +219,67 @@ function LiveAdmin({ bundle, refresh, setError }: AdminPanelProps) {
     await act(`queue-${queue[index].id}`, () => adminReorderQueue(bundle.tournament.id, ids));
   }
 
+  async function dropQueue(targetId: string) {
+    if (!draggedId || draggedId === targetId) { setDraggedId(null); return; }
+    const from = queue.findIndex((m) => m.id === draggedId);
+    const to = queue.findIndex((m) => m.id === targetId);
+    setDraggedId(null);
+    if (from >= 0 && to >= 0) await moveQueue(from, to);
+  }
+
+  async function setEmergencyPause(paused: boolean) {
+    await act('emergency-pause', () => adminSetEmergencyPause(bundle.tournament.id, paused));
+    setPauseConfirm(false);
+  }
+
   if (bundle.tournament.status === 'draft') return <section className="panel draft-launch">
     <div className="panel-title"><h2>Configurazione pronta</h2><span>DRAFT</span></div>
-    <div className="stats-strip"><Stat n={bundle.teams.filter(t=>t.status==='active').length} label="squadre"/><Stat n={bundle.groups.length} label="gironi"/><Stat n={bundle.fields.filter(f=>f.is_active).length} label="campi"/><Stat n={bundle.matches.length} label="partite"/></div>
+    <div className="stats-strip"><Stat n={activeTeams} label="squadre"/><Stat n={bundle.groups.length} label="gironi"/><Stat n={bundle.fields.filter(f=>f.is_active).length} label="campi"/><Stat n={bundle.matches.length} label="partite"/></div>
     <p>Controlla soprattutto le sezioni <strong>Squadre</strong> e <strong>Gironi</strong>. Finché il torneo è in bozza puoi modificare liberamente la struttura.</p>
     <div className="inline-actions"><button className="button secondary" onClick={() => void act('regen', () => regenerateGroupSchedule(bundle.tournament.id))}>{busy === 'regen' ? 'Rigenerazione…' : 'Rigenera calendario'}</button><button className="button primary" onClick={() => void act('start', () => adminStartTournament(bundle.tournament.id))}>{busy === 'start' ? 'Avvio…' : 'AVVIA TORNEO'}</button></div>
     <p className="hint">All'avvio tutte le partite dei gironi entrano nella coda rigida e i primi match vengono assegnati ai campi liberi.</p>
   </section>;
 
   return <>
-    <div className="field-grid">{bundle.fields.filter((f) => f.is_active).map((field) => <AdminFieldCard key={field.id} fieldName={field.name} match={matchByField.get(field.id)} bundle={bundle} busy={busy} act={act} />)}</div>
-    <section className="panel"><div className="panel-title"><h2>Coda partite</h2><span>ordine modificabile dall'admin</span></div>
+    <section className={tournamentPaused ? 'admin-emergency-bar active' : 'admin-emergency-bar'}>
+      <div>
+        <span>{tournamentPaused ? 'TORNEO IN PAUSA' : 'CONTROLLO EMERGENZA'}</span>
+        <strong>{tournamentPaused ? 'Timer e automazioni sono congelati' : 'Metti in pausa tutto il torneo'}</strong>
+        <small>{tournamentPaused ? 'Puoi continuare a correggere risultati, coda, squadre e impostazioni.' : 'Usalo solo se è necessario fermare contemporaneamente tutti i campi.'}</small>
+      </div>
+      {tournamentPaused
+        ? <button className="button resume-tournament" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(false)}>{busy === 'emergency-pause' ? 'Ripresa…' : '▶ RIPRENDI TORNEO'}</button>
+        : <button className="button emergency-pause-button" disabled={busy === 'emergency-pause'} onClick={() => setPauseConfirm(true)}>Ⅱ PAUSA TORNEO</button>}
+    </section>
+
+    {pauseConfirm && !tournamentPaused && <section className="admin-emergency-confirm">
+      <div><strong>Mettere in pausa l'intero torneo?</strong><span>Tutti i timer verranno congelati. I giocatori non potranno avviare, mettere in pausa, terminare o confermare risultati finché il torneo non viene ripreso.</span></div>
+      <div><button onClick={() => setPauseConfirm(false)}>Annulla</button><button className="confirm-danger" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(true)}>METTI IN PAUSA</button></div>
+    </section>}
+
+    <section className="stats-strip admin-dashboard-stats">
+      <Stat n={completedMatches} label="concluse"/>
+      <Stat n={queue.length} label="in coda"/>
+      <Stat n={activeTeams} label="squadre attive"/>
+      <Stat n={completedGroups} label={`gironi completati / ${bundle.groups.length}`}/>
+    </section>
+
+    <div className="field-grid admin-live-fields">{bundle.fields.filter((f) => f.is_active).map((field) => <AdminFieldCard key={field.id} fieldName={field.name} match={matchByField.get(field.id)} bundle={bundle} busy={busy} act={act} tournamentPaused={tournamentPaused} />)}</div>
+
+    <section className="panel admin-queue-panel"><div className="panel-title"><h2>Coda partite</h2><span>trascina oppure usa i controlli</span></div>
       {queue.length === 0 && <div className="empty-state compact">Coda vuota</div>}
-      {queue.slice(0, 30).map((m, i) => <div className="queue-row admin-queue-row" key={m.id}>
+      {queue.slice(0, 50).map((m, i) => <div
+        className={draggedId === m.id ? 'queue-row admin-queue-row dragging' : 'queue-row admin-queue-row'}
+        key={m.id}
+        draggable
+        onDragStart={() => setDraggedId(m.id)}
+        onDragEnd={() => setDraggedId(null)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); void dropQueue(m.id); }}
+      >
+        <span className="queue-drag" title="Trascina">⋮⋮</span>
         <span className="queue-number">{i+1}</span>
-        <strong>{teamName(bundle,m.team1_id)} vs {teamName(bundle,m.team2_id)}</strong>
+        <div className="queue-match-copy"><small>{adminStageLabel(bundle,m)}</small><strong>{teamName(bundle,m.team1_id)} vs {teamName(bundle,m.team2_id)}</strong></div>
         <div className="queue-controls">
           <button title="In cima" disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,0)}>⇈</button>
           <button title="Su" disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i-1)}>↑</button>
@@ -219,26 +294,47 @@ function LiveAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   </>;
 }
 
-function AdminFieldCard({ fieldName, match, bundle, busy, act }: { fieldName: string; match?: MatchRow; bundle: TournamentBundle; busy: string; act: (k:string, fn:()=>Promise<unknown>)=>Promise<void> }) {
+function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused }: { fieldName: string; match?: MatchRow; bundle: TournamentBundle; busy: string; act: (k:string, fn:()=>Promise<unknown>)=>Promise<void>; tournamentPaused: boolean }) {
   const [, setTick] = useState(Date.now());
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [score1, setScore1] = useState('');
+  const [score2, setScore2] = useState('');
   useEffect(() => { const id = window.setInterval(() => setTick(Date.now()), 500); return () => window.clearInterval(id); }, []);
+  useEffect(() => { setScore1(String(match?.score_team1 ?? '')); setScore2(String(match?.score_team2 ?? '')); }, [match?.id, match?.score_team1, match?.score_team2]);
   if (!match) return <section className="field-card field-free"><div className="panel-title"><strong>{fieldName}</strong><span>LIBERO</span></div><div className="field-empty">Campo disponibile</div></section>;
   const liveMatch = match;
   const remaining = secondsRemaining(liveMatch);
   const t1=teamName(bundle,liveMatch.team1_id), t2=teamName(bundle,liveMatch.team2_id);
+
   function cancel(){ if(window.confirm(`Annullare ${t1} vs ${t2}?`)) void act(`cancel-${liveMatch.id}`,()=>adminCancelMatch(liveMatch.id)); }
   function forfeit(loserId:string|null, loserName:string){ if(loserId && window.confirm(`Sconfitta a tavolino per ${loserName}? Il risultato sarà ${liveMatch.goal_target ?? 1}-0.`)) void act(`forfeit-${liveMatch.id}`,()=>adminForfeitMatch(liveMatch.id,loserId)); }
-  return <section className="field-card"><div className="panel-title"><strong>{fieldName}</strong><span>{liveMatch.status.replace('_',' ')}</span></div><div className="field-match"><strong>{t1}</strong><small>VS</small><strong>{t2}</strong></div><div className="big-timer">{liveMatch.duration_seconds == null ? '∞' : formatClock(remaining)}</div><div className="actions field-actions">
-    {['called','ready'].includes(liveMatch.status) && <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => startMatch(liveMatch.id))}>Avvia</button>}
-    {liveMatch.status === 'playing' && liveMatch.pause_allowed && (liveMatch.paused_at ? <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => resumeMatch(liveMatch.id))}>Riprendi</button> : <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => pauseMatch(liveMatch.id))}>Pausa</button>)}
-    {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina</button>}
-    {liveMatch.status === 'awaiting_result' && <span className="awaiting-chip">Attesa risultato</span>}
-    {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button disabled={busy.includes(liveMatch.id)} onClick={() => void act(`post-${liveMatch.id}`,()=>adminPostponeMatch(liveMatch.id))}>Rimanda</button>}
-    {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button className="danger-soft" disabled={busy.includes(liveMatch.id)} onClick={cancel}>Annulla</button>}
-  </div>
-  {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <div className="forfeit-row"><span>Tavolino:</span><button onClick={()=>forfeit(liveMatch.team1_id,t1)}>perde {t1}</button><button onClick={()=>forfeit(liveMatch.team2_id,t2)}>perde {t2}</button></div>}
-  {confirmEnd && liveMatch.status === 'playing' && <div className="admin-inline-confirm"><strong>Concludere la partita?</strong><span>La partita verrà chiusa e passerà all’inserimento del risultato.</span><div><button disabled={busy===liveMatch.id} onClick={() => setConfirmEnd(false)}>Continua</button><button className="danger-soft" disabled={busy===liveMatch.id} onClick={() => { setConfirmEnd(false); void act(liveMatch.id, () => endMatchEarly(liveMatch.id)); }}>Concludi partita</button></div></div>}
+  function saveResult() {
+    const a=Number(score1), b=Number(score2);
+    if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0) return;
+    void act(`score-${liveMatch.id}`,()=>submitMatchResult(liveMatch.id,a,b));
+  }
+
+  return <section className={tournamentPaused ? 'field-card admin-field-paused' : 'field-card'}>
+    <div className="panel-title"><strong>{fieldName}</strong><span>{tournamentPaused ? 'TORNEO IN PAUSA' : adminStatusLabel(liveMatch.status)}</span></div>
+    <div className="field-match"><strong>{t1}</strong><small>VS</small><strong>{t2}</strong></div>
+    <div className="big-timer">{liveMatch.duration_seconds == null ? '∞' : formatClock(remaining)}</div>
+    <div className="actions field-actions">
+      {['called','ready'].includes(liveMatch.status) && <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => startMatch(liveMatch.id))}>Avvia</button>}
+      {liveMatch.status === 'playing' && liveMatch.pause_allowed && (liveMatch.paused_at
+        ? <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => resumeMatch(liveMatch.id))}>Riprendi</button>
+        : <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => pauseMatch(liveMatch.id))}>Pausa</button>)}
+      {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina</button>}
+      {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button disabled={busy.includes(liveMatch.id)} onClick={() => void act(`post-${liveMatch.id}`,()=>adminPostponeMatch(liveMatch.id))}>Rimanda</button>}
+      {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button className="danger-soft" disabled={busy.includes(liveMatch.id)} onClick={cancel}>Annulla</button>}
+    </div>
+
+    {liveMatch.status === 'awaiting_result' && <div className="admin-field-result">
+      <span>Inserisci risultato</span>
+      <div><input type="number" min="0" value={score1} onChange={(e)=>setScore1(e.target.value)}/><strong>–</strong><input type="number" min="0" value={score2} onChange={(e)=>setScore2(e.target.value)}/><button disabled={busy===`score-${liveMatch.id}` || score1==='' || score2===''} onClick={saveResult}>Salva</button></div>
+    </div>}
+
+    {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <div className="forfeit-row"><span>Tavolino:</span><button onClick={()=>forfeit(liveMatch.team1_id,t1)}>perde {t1}</button><button onClick={()=>forfeit(liveMatch.team2_id,t2)}>perde {t2}</button></div>}
+    {confirmEnd && liveMatch.status === 'playing' && <div className="admin-inline-confirm"><strong>Concludere la partita?</strong><span>La partita verrà chiusa e passerà all’inserimento del risultato.</span><div><button disabled={busy===liveMatch.id} onClick={() => setConfirmEnd(false)}>Continua</button><button className="danger-soft" disabled={busy===liveMatch.id} onClick={() => { setConfirmEnd(false); void act(liveMatch.id, () => endMatchEarly(liveMatch.id)); }}>Concludi partita</button></div></div>}
   </section>;
 }
 
@@ -337,22 +433,102 @@ function BracketAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 }
 
 function MatchesAdmin({ bundle, refresh, setError }: AdminPanelProps) {
-  const sorted = [...bundle.matches].sort((a,b)=>(a.sequence_number??999999)-(b.sequence_number??999999));
-  return <section className="panel"><div className="panel-title"><h2>Partite</h2><span>{sorted.length} totali</span></div><div className="admin-match-list">{sorted.map((m)=><AdminMatchRow key={m.id} m={m} bundle={bundle} refresh={refresh} setError={setError}/>)}</div></section>;
+  const [query,setQuery]=useState('');
+  const [showFinished,setShowFinished]=useState(true);
+  const [showFuture,setShowFuture]=useState(true);
+  const [view,setView]=useState<'chronology'|'groups'>('chronology');
+  const [statusFilter,setStatusFilter]=useState<'all'|MatchRow['status']>('all');
+  const [fieldFilter,setFieldFilter]=useState('all');
+
+  const liveFieldIds = new Set(bundle.matches.filter((m)=>['called','ready','playing','awaiting_result'].includes(m.status) && m.field_id).map((m)=>m.field_id!));
+  const freeFields = bundle.fields.filter((f)=>f.is_active && !liveFieldIds.has(f.id));
+  const normalized = normalizeAdminSearch(query);
+
+  const filtered = useMemo(() => [...bundle.matches]
+    .sort((a,b)=>(a.sequence_number??999999)-(b.sequence_number??999999) || (a.queue_position??999999)-(b.queue_position??999999))
+    .filter((m)=>{
+      const closed=['finished','forfeit','cancelled'].includes(m.status);
+      if(closed && !showFinished) return false;
+      if(!closed && !showFuture) return false;
+      if(statusFilter!=='all' && m.status!==statusFilter) return false;
+      if(fieldFilter!=='all' && m.field_id!==fieldFilter) return false;
+      if(normalized && !normalizeAdminSearch(`${teamName(bundle,m.team1_id)} ${teamName(bundle,m.team2_id)} ${adminStageLabel(bundle,m)}`).includes(normalized)) return false;
+      return true;
+    }),[bundle,query,showFinished,showFuture,statusFilter,fieldFilter]);
+
+  const groupSections = bundle.groups.map((group)=>({
+    id:group.id,
+    title:group.name,
+    matches:filtered.filter((m)=>m.group_id===group.id),
+  })).filter((section)=>section.matches.length>0);
+  const knockout = filtered.filter((m)=>m.stage!=='group');
+  if(knockout.length) groupSections.push({id:'knockout',title:'Eliminazione diretta',matches:knockout});
+  const sections = view==='chronology' ? [{id:'all',title:'Cronologia totale',matches:filtered}] : groupSections;
+
+  const statuses: MatchRow['status'][] = ['scheduled','queued','called','ready','playing','awaiting_result','finished','postponed','cancelled','forfeit'];
+
+  return <>
+    <section className="panel admin-match-filters">
+      <div className="panel-title"><h2>Partite</h2><span>{filtered.length} visualizzate / {bundle.matches.length}</span></div>
+      <div className="admin-match-filter-grid">
+        <label className="admin-search-field"><span>Cerca</span><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Squadra, girone o fase…" /></label>
+        <label><span>Stato</span><select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value as 'all'|MatchRow['status'])}><option value="all">Tutti gli stati</option>{statuses.map((status)=><option value={status} key={status}>{adminStatusLabel(status)}</option>)}</select></label>
+        <label><span>Campo</span><select value={fieldFilter} onChange={(e)=>setFieldFilter(e.target.value)}><option value="all">Tutti i campi</option>{bundle.fields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select></label>
+      </div>
+      <div className="admin-match-filter-bottom">
+        <div className="admin-checkboxes">
+          <label><input type="checkbox" checked={showFuture} onChange={(e)=>setShowFuture(e.target.checked)}/> Future / in corso</label>
+          <label><input type="checkbox" checked={showFinished} onChange={(e)=>setShowFinished(e.target.checked)}/> Finite / chiuse</label>
+        </div>
+        <div className="admin-view-toggle">
+          <button className={view==='chronology'?'active':''} onClick={()=>setView('chronology')}>Cronologia totale</button>
+          <button className={view==='groups'?'active':''} onClick={()=>setView('groups')}>Per gironi</button>
+        </div>
+      </div>
+    </section>
+
+    {sections.length===0 && <div className="empty-state">Nessuna partita corrisponde ai filtri.</div>}
+    {sections.map((section)=><section className="panel admin-match-section" key={section.id}>
+      <div className="panel-title"><h2>{section.title}</h2><span>{section.matches.length}</span></div>
+      <div className="admin-match-list">{section.matches.map((m)=><AdminMatchRow key={m.id} m={m} bundle={bundle} refresh={refresh} setError={setError} freeFields={freeFields}/>)}</div>
+    </section>)}
+  </>;
 }
 
-function AdminMatchRow({ m, bundle, refresh, setError }: { m: MatchRow; bundle: TournamentBundle; refresh:()=>Promise<void>; setError:(s:string)=>void }) {
+function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchRow; bundle: TournamentBundle; refresh:()=>Promise<void>; setError:(s:string)=>void; freeFields:TournamentBundle['fields'] }) {
   const [s1,setS1]=useState(String(m.score_team1 ?? ''));
   const [s2,setS2]=useState(String(m.score_team2 ?? ''));
   const [busy,setBusy]=useState(false);
+  useEffect(()=>{setS1(String(m.score_team1??''));setS2(String(m.score_team2??''));},[m.id,m.score_team1,m.score_team2]);
   const closed=['finished','forfeit'].includes(m.status);
-  async function save() {
-    const a=Number(s1), b=Number(s2); if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0){setError('Punteggio non valido.');return;}
-    setBusy(true); setError('');
-    try { if(closed) await adminUpdateMatchResult(m.id,a,b); else await submitMatchResult(m.id,a,b); await refresh(); }
-    catch(e){setError(e instanceof Error?e.message:String(e));} finally{setBusy(false);}
+  const fullyClosed=['finished','forfeit','cancelled'].includes(m.status);
+  const currentField=bundle.fields.find((f)=>f.id===m.field_id);
+
+  async function run(fn:()=>Promise<unknown>){
+    setBusy(true);setError('');
+    try{await fn();await refresh();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
   }
-  return <div className="admin-match-row"><div><span className="status-mini">{m.status}</span><strong>{teamName(bundle,m.team1_id)} vs {teamName(bundle,m.team2_id)}</strong></div><div className="score-mini"><input type="number" min="0" value={s1} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || (!closed && !['playing','awaiting_result'].includes(m.status))} onClick={()=>void save()}>{closed?'Correggi':'Salva'}</button></div></div>;
+  async function save() {
+    const a=Number(s1), b=Number(s2);
+    if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0){setError('Punteggio non valido.');return;}
+    await run(()=>closed?adminUpdateMatchResult(m.id,a,b):submitMatchResult(m.id,a,b));
+  }
+
+  return <div className="admin-match-row admin-match-row-v2">
+    <div className="admin-match-main">
+      <div className="admin-match-meta"><span className={`status-mini status-${m.status}`}>{adminStatusLabel(m.status)}</span><span>{adminStageLabel(bundle,m)}</span>{currentField&&<span>{currentField.name}</span>}</div>
+      <strong>{teamName(bundle,m.team1_id)} <em>vs</em> {teamName(bundle,m.team2_id)}</strong>
+    </div>
+
+    <div className="admin-match-actions-v2">
+      <div className="score-mini"><input type="number" min="0" value={s1} disabled={m.status==='cancelled'} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} disabled={m.status==='cancelled'} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || (!closed && !['playing','awaiting_result'].includes(m.status))} onClick={()=>void save()}>{closed?'Correggi':'Salva'}</button></div>
+      {!fullyClosed && <div className="admin-match-inline-actions">
+        {['queued','called','ready','playing','awaiting_result'].includes(m.status) && <select defaultValue="" disabled={busy || freeFields.length===0} onChange={(e)=>{const id=e.currentTarget.value;e.currentTarget.value='';if(id)void run(()=>adminAssignMatchField(m.id,id));}}><option value="">Assegna campo…</option>{freeFields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select>}
+        {!['scheduled'].includes(m.status) && <button disabled={busy} onClick={()=>void run(()=>adminPostponeMatch(m.id))}>Rimanda</button>}
+        <button className="danger-soft" disabled={busy} onClick={()=>{if(window.confirm('Annullare questa partita?'))void run(()=>adminCancelMatch(m.id));}}>Annulla</button>
+      </div>}
+    </div>
+  </div>;
 }
 
 function FieldsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
@@ -513,6 +689,9 @@ function RuleInputs({title,minutes,setMinutes,goals,setGoals}:{title:string;minu
 function Stat({n,label}:{n:number;label:string}){return <div><strong>{n}</strong><span>{label}</span></div>;}
 function KeyValue({k,v}:{k:string;v:string}){return <div className="key-value"><span>{k}</span><strong>{v}</strong></div>;}
 function teamName(bundle:TournamentBundle,id:string|null){return bundle.teams.find(t=>t.id===id)?.name??'Da definire';}
-function tabTitle(tab:AdminTab){return {live:'Torneo live',teams:'Squadre',groups:'Gironi',bracket:'Tabellone',matches:'Partite',fields:'Campi',settings:'Impostazioni'}[tab];}
+function normalizeAdminSearch(value:string){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase('it');}
+function adminStageLabel(bundle:TournamentBundle,m:MatchRow){if(m.stage==='group')return bundle.groups.find(g=>g.id===m.group_id)?.name??'Girone';if(m.stage==='final')return'Finale';if(m.stage==='third_place')return'3° / 4° posto';return bundle.knockoutRounds.find(r=>r.id===m.knockout_round_id)?.name??'Eliminazione';}
+function adminStatusLabel(status:MatchRow['status']){const labels:Record<MatchRow['status'],string>={scheduled:'PROGRAMMATA',queued:'IN CODA',called:'CHIAMATA',ready:'PRONTA',playing:'IN CORSO',awaiting_result:'ATTESA RISULTATO',finished:'FINITA',postponed:'RIMANDATA',cancelled:'ANNULLATA',forfeit:'TAVOLINO'};return labels[status];}
+function tabTitle(tab:AdminTab){return {live:'Dashboard',teams:'Squadre',groups:'Gironi',bracket:'Tabellone',matches:'Partite',fields:'Campi',settings:'Impostazioni'}[tab];}
 function CenteredAdmin({title}:{title:string}){return <main className="page page-centered"><section className="login-card"><h2>{title}</h2></section></main>;}
 interface AdminPanelProps{bundle:TournamentBundle;refresh:()=>Promise<void>;setError:(s:string)=>void;}

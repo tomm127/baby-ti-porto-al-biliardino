@@ -67,13 +67,14 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
 
   if (loading) return <CenteredMessage title="Caricamento torneo…" />;
   if (error || !bundle) return <CenteredMessage title="Non riesco ad aprire il torneo" body={error} back />;
-  if (!teamId) return <><ConnectionBanner online={online} cachedAt={cachedAt} /><TeamChooser bundle={bundle} onChosen={refresh} /></>;
+  if (!teamId) return <><ConnectionBanner online={online} cachedAt={cachedAt} /><TeamChooser bundle={bundle} onChosen={refresh} />{bundle.settings.emergency_paused && <TournamentPausedOverlay />}</>;
 
   const team = bundle.teams.find((t) => t.id === teamId);
   if (!team) return <CenteredMessage title="Squadra non trovata" body="Cambia associazione del dispositivo." back />;
 
   return (
     <main className="app-shell">
+      {bundle.settings.emergency_paused && <TournamentPausedOverlay />}
       <header className="app-header">
         <button className="icon-button" aria-label="Cambia torneo" onClick={() => { window.localStorage.removeItem(LAST_PLAYER_TOURNAMENT_KEY); navigate('/?choose=1'); }}>←</button>
         <div><strong>{bundle.tournament.name}</strong><span>Baby ti porto al biliardino</span></div>
@@ -438,7 +439,7 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
 
   useEffect(() => {
     void tick;
-    if (!online || !match || match.status !== 'playing' || match.duration_seconds == null || remaining !== 0 || countdown > 0 || expiring.current) return;
+    if (!online || !match || bundle?.settings.emergency_paused || match.status !== 'playing' || match.duration_seconds == null || remaining !== 0 || countdown > 0 || expiring.current) return;
     expiring.current = true;
     markTimerExpired(match.id).then(refresh).catch((e) => setError(e instanceof Error ? e.message : String(e))).finally(() => { expiring.current = false; });
   }, [tick, online, match, remaining, countdown, refresh]);
@@ -466,6 +467,7 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   }
 
   return <main className="match-screen">
+    {bundle.settings.emergency_paused && <TournamentPausedOverlay dark />}
     <ConnectionBanner online={online} cachedAt={cachedAt} />
     <header className="match-top"><button className="icon-button light" onClick={() => navigate(`/tournament/${slug}`)}>←</button><div><span>{bundle.tournament.name}</span><strong>{field}</strong></div></header>
     <section className="match-stage">
@@ -480,6 +482,12 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
       {error && <div className="alert error match-error">{error}</div>}
     </section>
   </main>;
+}
+
+function TournamentPausedOverlay({ dark = false }: { dark?: boolean }) {
+  return <div className={dark ? 'tournament-paused-overlay dark' : 'tournament-paused-overlay'}>
+    <div><span>Ⅱ</span><strong>TORNEO IN PAUSA</strong><p>Attendere indicazioni dell'organizzazione.</p></div>
+  </div>;
 }
 
 function Nav({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: string }) { return <button className={active ? 'nav-item active' : 'nav-item'} onClick={onClick}><span>{icon}</span>{label}</button>; }
