@@ -1,4 +1,4 @@
-const CACHE = 'baby-biliardino-shell-v4';
+const CACHE = 'baby-biliardino-shell-v5';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png'];
 
 self.addEventListener('install', (event) => {
@@ -62,7 +62,8 @@ self.addEventListener('push', (event) => {
     tag: data.tag || `baby-biliardino-${Date.now()}`,
     renotify: called,
     requireInteraction: called,
-    vibrate: called ? [300, 120, 300, 120, 500] : [180, 100, 180],
+    silent: false,
+    vibrate: called ? [220, 100, 220] : [140],
     data: { url: data.url || '/', kind: data.kind, ...(data.data || {}) },
   };
 
