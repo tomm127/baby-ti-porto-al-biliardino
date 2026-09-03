@@ -221,7 +221,6 @@ function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPa
   const liveMatches = bundle.matches.filter((m) => ['called','ready','playing','awaiting_result'].includes(m.status));
   const queue = bundle.matches.filter((m) => m.status === 'queued').sort((a,b) => (a.queue_position ?? 999999) - (b.queue_position ?? 999999));
   const matchByField = new Map(liveMatches.filter((m) => m.field_id).map((m) => [m.field_id!, m]));
-  const freeFields = bundle.fields.filter((f) => f.is_active && !matchByField.has(f.id));
   const tournamentPaused = bundle.settings.emergency_paused;
 
   const completedMatches = bundle.matches.filter((m) => ['finished','forfeit'].includes(m.status)).length;
@@ -316,9 +315,6 @@ function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPa
           <button title="Su" disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i-1)}>↑</button>
           <button title="Giù" disabled={i===queue.length-1 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i+1)}>↓</button>
           <button disabled={busy === m.id} onClick={() => void act(m.id, () => adminPostponeMatch(m.id))}>In fondo</button>
-          <select aria-label="Assegna a campo" defaultValue="" disabled={freeFields.length===0 || busy===m.id} onChange={(e)=>{ const field=e.currentTarget.value; e.currentTarget.value=''; if(field) void act(m.id,()=>adminAssignMatchField(m.id,field)); }}>
-            <option value="">Campo…</option>{freeFields.map(f=><option value={f.id} key={f.id}>{f.name}</option>)}
-          </select>
         </div>
       </div>)}
     </section>
