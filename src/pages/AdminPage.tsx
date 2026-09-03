@@ -39,8 +39,6 @@ import { adminLogin, hasSupabaseConfig, supabase } from '../lib/supabase.ts';
 import { formatClock, secondsRemaining } from '../lib/time.ts';
 import { navigate } from '../router.ts';
 import { KnockoutBracket, QualificationRanking } from '../components/KnockoutBracket.tsx';
-import { useConnectivity } from '../lib/useConnectivity.ts';
-import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 
 type AdminTab = 'live' | 'teams' | 'groups' | 'bracket' | 'matches' | 'fields' | 'settings';
 
@@ -108,15 +106,13 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   }, [selectedId]);
 
-  const online = useConnectivity(() => { if (selectedId) void refreshBundle(selectedId); });
-
   useEffect(() => { refreshList().catch((e) => setError(String(e))).finally(() => setLoading(false)); }, [refreshList]);
   useEffect(() => { if (selectedId) void refreshBundle(selectedId); }, [selectedId, refreshBundle]);
   useEffect(() => {
-    if (!online || !selectedId || bundle?.tournament.status !== 'active') return;
+    if (!selectedId || bundle?.tournament.status !== 'active') return;
     const id = window.setInterval(() => void refreshBundle(selectedId), 3000);
     return () => window.clearInterval(id);
-  }, [online, selectedId, bundle?.tournament.status, refreshBundle]);
+  }, [selectedId, bundle?.tournament.status, refreshBundle]);
 
   async function logout() {
     await supabase?.auth.signOut();
@@ -150,7 +146,6 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
         </div>
       </header>
 
-      <ConnectionBanner online={online} />
       {error && <div className="alert error">{error}</div>}
       {loading && <div className="empty-state">Caricamento…</div>}
       {creating && <CreateTournamentForm onCreated={created} onCancel={() => setCreating(false)} />}
@@ -231,7 +226,7 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act }: { fieldName: st
   return <section className="field-card"><div className="panel-title"><strong>{fieldName}</strong><span>{liveMatch.status.replace('_',' ')}</span></div><div className="field-match"><strong>{t1}</strong><small>VS</small><strong>{t2}</strong></div><div className="big-timer">{liveMatch.duration_seconds == null ? '∞' : formatClock(remaining)}</div><div className="actions field-actions">
     {['called','ready'].includes(liveMatch.status) && <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => startMatch(liveMatch.id))}>Avvia</button>}
     {liveMatch.status === 'playing' && liveMatch.pause_allowed && (liveMatch.paused_at ? <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => resumeMatch(liveMatch.id))}>Riprendi</button> : <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => pauseMatch(liveMatch.id))}>Pausa</button>)}
-    {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id} onClick={() => void act(liveMatch.id, () => endMatchEarly(liveMatch.id))}>Termina</button>}
+    {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id} onClick={() => { if (window.confirm('Sei sicuro di voler concludere la partita?\n\nLa partita verrà chiusa e si passerà all’inserimento del risultato.')) void act(liveMatch.id, () => endMatchEarly(liveMatch.id)); }}>Termina</button>}
     {liveMatch.status === 'awaiting_result' && <span className="awaiting-chip">Attesa risultato</span>}
     {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button disabled={busy.includes(liveMatch.id)} onClick={() => void act(`post-${liveMatch.id}`,()=>adminPostponeMatch(liveMatch.id))}>Rimanda</button>}
     {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button className="danger-soft" disabled={busy.includes(liveMatch.id)} onClick={cancel}>Annulla</button>}
