@@ -1,0 +1,550 @@
+-- Baby ti porto al biliardino
+-- Migration 006: admin control room
+-- Teams, fields, queue overrides and editable future rules.
+-- Apply AFTER 005_knockout_engine.sql.
+
+begin;
+
+-- Keep queue positions compact after destructive admin changes.
+create or replace function public.engine_normalize_queue(p_tournament_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_match record;
+  v_pos integer := 0;
+begin
+  perform public.lock_tournament(p_tournament_id);
+
+  update public.matches
+  set queue_position = queue_position + 1000000
+  where tournament_id = p_tournament_id
+    and status = 'queued'
+    and queue_position is not null;
+
+  for v_match in
+    select id
+    from public.matches
+    where tournament_id = p_tournament_id
+      and status = 'queued'
+    order by queue_position, sequence_number nulls last, created_at, id
+  loop
+    v_pos := v_pos + 1;
+    update public.matches set queue_position = v_pos where id = v_match.id;
+  end loop;
+
+  return v_pos;
+end;
+$$;
+revoke all on function public.engine_normalize_queue(uuid) from public;
+
+-- Structural edits are safe only before the knockout bracket exists.
+create or replace function public.require_group_structure_editable(p_tournament_id uuid)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_status public.tournament_status;
+  v_phase public.tournament_phase;
+begin
+  select status, phase into v_status, v_phase
+  from public.tournaments where id = p_tournament_id;
+
+  if not found then raise exception 'Tournament not found'; end if;
+  if v_status not in ('draft','active') or v_phase <> 'groups' then
+    raise exception 'La struttura dei gironi non può essere modificata dopo l''inizio della fase eliminatoria';
+  end if;
+  if exists (select 1 from public.matches where tournament_id=p_tournament_id and stage <> 'group') then
+    raise exception 'Il tabellone eliminatorio esiste già: modifica bloccata per evitare risultati incoerenti';
+  end if;
+end;
+$$;
+revoke all on function public.require_group_structure_editable(uuid) from public;
+
+
+create or replace function public.engine_maybe_advance_after_structure_edit(p_tournament_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status public.tournament_status;
+  v_knockout boolean;
+begin
+  select status into v_status from public.tournaments where id=p_tournament_id;
+  if v_status <> 'active' then return; end if;
+  if not public.engine_groups_complete(p_tournament_id) then return; end if;
+  select knockout_enabled into v_knockout from public.tournament_settings where tournament_id=p_tournament_id;
+  if coalesce(v_knockout,false) then
+    perform public.engine_create_knockout(p_tournament_id);
+  else
+    update public.tournaments set status='completed',phase='completed',completed_at=coalesce(completed_at,now()) where id=p_tournament_id;
+  end if;
+end;
+$$;
+revoke all on function public.engine_maybe_advance_after_structure_edit(uuid) from public;
+
+-- Add one team. In an active group stage, missing matches are appended to the
+-- END of the existing rigid queue; existing order/results are untouched.
+create or replace function public.admin_add_team(
+  p_tournament_id uuid,
+  p_group_id uuid,
+  p_name text,
+  p_pin text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, extensions, auth
+as $$
+declare
+  v_team_id uuid;
+  v_status public.tournament_status;
+  v_pin_enabled boolean;
+  v_rule public.match_rule_sets%rowtype;
+  v_pause boolean;
+  v_seq integer;
+  v_queue integer;
+  v_opponent record;
+  v_match_id uuid;
+begin
+  perform public.require_admin();
+  perform public.lock_tournament(p_tournament_id);
+  perform public.require_group_structure_editable(p_tournament_id);
+
+  if p_name is null or length(trim(p_name)) = 0 then raise exception 'Nome squadra obbligatorio'; end if;
+  if not exists (select 1 from public.groups where id=p_group_id and tournament_id=p_tournament_id) then
+    raise exception 'Girone non valido';
+  end if;
+
+  select t.status, s.team_pin_enabled, s.pause_enabled
+    into v_status, v_pin_enabled, v_pause
+  from public.tournaments t
+  join public.tournament_settings s on s.tournament_id=t.id
+  where t.id=p_tournament_id;
+
+  if v_pin_enabled and (p_pin is null or length(trim(p_pin))=0) then
+    raise exception 'I PIN sono attivi: inserisci un PIN per la nuova squadra';
+  end if;
+
+  insert into public.teams(tournament_id,name,team_pin_hash)
+  values (
+    p_tournament_id,
+    trim(p_name),
+    case when p_pin is null or length(trim(p_pin))=0 then null
+         else extensions.crypt(trim(p_pin), extensions.gen_salt('bf',10)) end
+  ) returning id into v_team_id;
+
+  insert into public.group_teams(tournament_id,group_id,team_id)
+  values (p_tournament_id,p_group_id,v_team_id);
+
+  -- Draft schedule is regenerated by the TypeScript engine after this RPC.
+  if v_status = 'draft' then return v_team_id; end if;
+
+  select * into v_rule from public.match_rule_sets
+  where tournament_id=p_tournament_id and scope='group';
+  select coalesce(max(sequence_number),0) into v_seq from public.matches where tournament_id=p_tournament_id;
+  select coalesce(max(queue_position),0) into v_queue from public.matches where tournament_id=p_tournament_id and status='queued';
+
+  for v_opponent in
+    select tm.id
+    from public.group_teams gt
+    join public.teams tm on tm.id=gt.team_id and tm.status='active'
+    where gt.tournament_id=p_tournament_id and gt.group_id=p_group_id and gt.team_id<>v_team_id
+    order by gt.created_at, tm.name
+  loop
+    v_seq := v_seq + 1;
+    v_queue := v_queue + 1;
+    insert into public.matches(
+      tournament_id,stage,status,group_id,team1_id,team2_id,sequence_number,queue_position,
+      duration_seconds,goal_target,pause_allowed,golden_goal_on_tie
+    ) values (
+      p_tournament_id,'group','queued',p_group_id,v_team_id,v_opponent.id,v_seq,v_queue,
+      v_rule.duration_seconds,v_rule.goal_target,v_pause,false
+    ) returning id into v_match_id;
+    insert into public.match_events(tournament_id,match_id,event_type,actor_user_id,payload)
+    values(p_tournament_id,v_match_id,'queued',auth.uid(),jsonb_build_object('reason','team_added'));
+  end loop;
+
+  perform public.engine_fill_free_fields(p_tournament_id);
+  return v_team_id;
+end;
+$$;
+revoke all on function public.admin_add_team(uuid,uuid,text,text) from public;
+grant execute on function public.admin_add_team(uuid,uuid,text,text) to authenticated;
+
+-- Withdraw: played results remain; every unclosed group match involving the
+-- team is removed. This avoids blocking automatic end-of-groups qualification.
+create or replace function public.admin_withdraw_team(p_team_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_team public.teams%rowtype;
+  v_deleted integer;
+begin
+  perform public.require_admin();
+  select * into v_team from public.teams where id=p_team_id for update;
+  if not found then raise exception 'Squadra non trovata'; end if;
+  perform public.lock_tournament(v_team.tournament_id);
+  perform public.require_group_structure_editable(v_team.tournament_id);
+
+  if v_team.status='withdrawn' then return 0; end if;
+
+  delete from public.matches
+  where tournament_id=v_team.tournament_id
+    and stage='group'
+    and p_team_id in (team1_id,team2_id)
+    and status not in ('finished','forfeit');
+  get diagnostics v_deleted = row_count;
+
+  update public.teams set status='withdrawn', withdrawn_at=now() where id=p_team_id;
+  perform public.engine_normalize_queue(v_team.tournament_id);
+  perform public.engine_fill_free_fields(v_team.tournament_id);
+  perform public.engine_maybe_advance_after_structure_edit(v_team.tournament_id);
+  return v_deleted;
+end;
+$$;
+revoke all on function public.admin_withdraw_team(uuid) from public;
+grant execute on function public.admin_withdraw_team(uuid) to authenticated;
+
+-- Restore a withdrawn team. Existing completed results stay; any missing group
+-- pairings are created/reopened and appended to the live queue.
+create or replace function public.admin_restore_team(p_team_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_team public.teams%rowtype;
+  v_group_id uuid;
+  v_tstatus public.tournament_status;
+  v_rule public.match_rule_sets%rowtype;
+  v_pause boolean;
+  v_seq integer;
+  v_queue integer;
+  v_count integer := 0;
+  v_opponent record;
+  v_match_id uuid;
+begin
+  perform public.require_admin();
+  select * into v_team from public.teams where id=p_team_id for update;
+  if not found then raise exception 'Squadra non trovata'; end if;
+  perform public.lock_tournament(v_team.tournament_id);
+  perform public.require_group_structure_editable(v_team.tournament_id);
+
+  select group_id into v_group_id from public.group_teams where tournament_id=v_team.tournament_id and team_id=p_team_id;
+  if v_group_id is null then raise exception 'Squadra senza girone'; end if;
+
+  update public.teams set status='active', withdrawn_at=null where id=p_team_id;
+  select t.status,s.pause_enabled into v_tstatus,v_pause
+  from public.tournaments t join public.tournament_settings s on s.tournament_id=t.id
+  where t.id=v_team.tournament_id;
+
+  if v_tstatus='draft' then return 0; end if;
+
+  select * into v_rule from public.match_rule_sets where tournament_id=v_team.tournament_id and scope='group';
+  select coalesce(max(sequence_number),0) into v_seq from public.matches where tournament_id=v_team.tournament_id;
+  select coalesce(max(queue_position),0) into v_queue from public.matches where tournament_id=v_team.tournament_id and status='queued';
+
+  for v_opponent in
+    select tm.id
+    from public.group_teams gt join public.teams tm on tm.id=gt.team_id and tm.status='active'
+    where gt.tournament_id=v_team.tournament_id and gt.group_id=v_group_id and gt.team_id<>p_team_id
+      and not exists (
+        select 1 from public.matches m
+        where m.tournament_id=v_team.tournament_id and m.stage='group' and m.group_id=v_group_id
+          and ((m.team1_id=p_team_id and m.team2_id=tm.id) or (m.team1_id=tm.id and m.team2_id=p_team_id))
+      )
+    order by gt.created_at,tm.name
+  loop
+    v_seq:=v_seq+1; v_queue:=v_queue+1; v_count:=v_count+1;
+    insert into public.matches(
+      tournament_id,stage,status,group_id,team1_id,team2_id,sequence_number,queue_position,
+      duration_seconds,goal_target,pause_allowed,golden_goal_on_tie
+    ) values (
+      v_team.tournament_id,'group','queued',v_group_id,p_team_id,v_opponent.id,v_seq,v_queue,
+      v_rule.duration_seconds,v_rule.goal_target,v_pause,false
+    ) returning id into v_match_id;
+    insert into public.match_events(tournament_id,match_id,event_type,actor_user_id,payload)
+    values(v_team.tournament_id,v_match_id,'queued',auth.uid(),jsonb_build_object('reason','team_restored'));
+  end loop;
+
+  perform public.engine_fill_free_fields(v_team.tournament_id);
+  return v_count;
+end;
+$$;
+revoke all on function public.admin_restore_team(uuid) from public;
+grant execute on function public.admin_restore_team(uuid) to authenticated;
+
+-- Delete completely: every group-stage result/match for the team is removed,
+-- then the team itself is deleted. Standings recalculate automatically.
+create or replace function public.admin_delete_team_completely(p_team_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_team public.teams%rowtype;
+begin
+  perform public.require_admin();
+  select * into v_team from public.teams where id=p_team_id for update;
+  if not found then raise exception 'Squadra non trovata'; end if;
+  perform public.lock_tournament(v_team.tournament_id);
+  perform public.require_group_structure_editable(v_team.tournament_id);
+
+  delete from public.matches
+  where tournament_id=v_team.tournament_id and stage='group'
+    and p_team_id in (team1_id,team2_id);
+  delete from public.teams where id=p_team_id;
+
+  perform public.engine_normalize_queue(v_team.tournament_id);
+  perform public.engine_fill_free_fields(v_team.tournament_id);
+  perform public.engine_maybe_advance_after_structure_edit(v_team.tournament_id);
+end;
+$$;
+revoke all on function public.admin_delete_team_completely(uuid) from public;
+grant execute on function public.admin_delete_team_completely(uuid) to authenticated;
+
+-- Force a team into another group. In draft this just changes membership and
+-- the frontend regenerates the schedule. During live groups ALL previous group
+-- matches/results for this team are removed and new pairings are appended.
+create or replace function public.admin_force_move_team_group(p_team_id uuid,p_group_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_team public.teams%rowtype;
+  v_old_group uuid;
+  v_status public.tournament_status;
+  v_rule public.match_rule_sets%rowtype;
+  v_pause boolean;
+  v_seq integer;
+  v_queue integer;
+  v_count integer:=0;
+  v_opponent record;
+  v_match_id uuid;
+begin
+  perform public.require_admin();
+  select * into v_team from public.teams where id=p_team_id for update;
+  if not found then raise exception 'Squadra non trovata'; end if;
+  perform public.lock_tournament(v_team.tournament_id);
+  perform public.require_group_structure_editable(v_team.tournament_id);
+  if not exists(select 1 from public.groups where id=p_group_id and tournament_id=v_team.tournament_id) then raise exception 'Girone non valido'; end if;
+
+  select group_id into v_old_group from public.group_teams where tournament_id=v_team.tournament_id and team_id=p_team_id;
+  if v_old_group=p_group_id then return 0; end if;
+
+  select t.status,s.pause_enabled into v_status,v_pause
+  from public.tournaments t join public.tournament_settings s on s.tournament_id=t.id
+  where t.id=v_team.tournament_id;
+
+  if v_status='active' then
+    delete from public.matches where tournament_id=v_team.tournament_id and stage='group' and p_team_id in(team1_id,team2_id);
+  end if;
+
+  update public.group_teams set group_id=p_group_id where tournament_id=v_team.tournament_id and team_id=p_team_id;
+
+  if v_status='draft' or v_team.status='withdrawn' then return 0; end if;
+
+  select * into v_rule from public.match_rule_sets where tournament_id=v_team.tournament_id and scope='group';
+  select coalesce(max(sequence_number),0) into v_seq from public.matches where tournament_id=v_team.tournament_id;
+  select coalesce(max(queue_position),0) into v_queue from public.matches where tournament_id=v_team.tournament_id and status='queued';
+
+  for v_opponent in
+    select tm.id
+    from public.group_teams gt join public.teams tm on tm.id=gt.team_id and tm.status='active'
+    where gt.tournament_id=v_team.tournament_id and gt.group_id=p_group_id and gt.team_id<>p_team_id
+    order by gt.created_at,tm.name
+  loop
+    v_seq:=v_seq+1; v_queue:=v_queue+1; v_count:=v_count+1;
+    insert into public.matches(
+      tournament_id,stage,status,group_id,team1_id,team2_id,sequence_number,queue_position,
+      duration_seconds,goal_target,pause_allowed,golden_goal_on_tie
+    ) values (
+      v_team.tournament_id,'group','queued',p_group_id,p_team_id,v_opponent.id,v_seq,v_queue,
+      v_rule.duration_seconds,v_rule.goal_target,v_pause,false
+    ) returning id into v_match_id;
+    insert into public.match_events(tournament_id,match_id,event_type,actor_user_id,payload)
+    values(v_team.tournament_id,v_match_id,'queued',auth.uid(),jsonb_build_object('reason','team_moved_group'));
+  end loop;
+
+  perform public.engine_normalize_queue(v_team.tournament_id);
+  perform public.engine_fill_free_fields(v_team.tournament_id);
+  return v_count;
+end;
+$$;
+revoke all on function public.admin_force_move_team_group(uuid,uuid) from public;
+grant execute on function public.admin_force_move_team_group(uuid,uuid) to authenticated;
+
+-- Fields: never delete history; disable instead. A new active field immediately
+-- picks up the next queued match when the tournament is live.
+create or replace function public.admin_add_field(p_tournament_id uuid,p_name text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare v_id uuid; v_sort integer;
+begin
+  perform public.require_admin(); perform public.lock_tournament(p_tournament_id);
+  if p_name is null or length(trim(p_name))=0 then raise exception 'Nome campo obbligatorio'; end if;
+  select coalesce(max(sort_order),0)+1 into v_sort from public.fields where tournament_id=p_tournament_id;
+  insert into public.fields(tournament_id,name,sort_order,is_active) values(p_tournament_id,trim(p_name),v_sort,true) returning id into v_id;
+  if exists(select 1 from public.tournaments where id=p_tournament_id and status='active') then perform public.engine_fill_free_fields(p_tournament_id); end if;
+  return v_id;
+end;
+$$;
+revoke all on function public.admin_add_field(uuid,text) from public;
+grant execute on function public.admin_add_field(uuid,text) to authenticated;
+
+create or replace function public.admin_update_field(p_field_id uuid,p_name text,p_is_active boolean)
+returns public.fields
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare v_field public.fields%rowtype;
+begin
+  perform public.require_admin();
+  select * into v_field from public.fields where id=p_field_id for update;
+  if not found then raise exception 'Campo non trovato'; end if;
+  perform public.lock_tournament(v_field.tournament_id);
+  if p_name is null or length(trim(p_name))=0 then raise exception 'Nome campo obbligatorio'; end if;
+  if not p_is_active and exists(
+    select 1 from public.matches where field_id=p_field_id and status in('called','ready','playing','awaiting_result')
+  ) then raise exception 'Prima termina o rimanda la partita attualmente assegnata a questo campo'; end if;
+  update public.fields set name=trim(p_name),is_active=p_is_active where id=p_field_id returning * into v_field;
+  if p_is_active then perform public.engine_fill_free_fields(v_field.tournament_id); end if;
+  return v_field;
+end;
+$$;
+revoke all on function public.admin_update_field(uuid,text,boolean) from public;
+grant execute on function public.admin_update_field(uuid,text,boolean) to authenticated;
+
+-- Force a queued/live match onto a specific FREE active field.
+create or replace function public.admin_assign_match_field(p_match_id uuid,p_field_id uuid)
+returns public.matches
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare v_match public.matches%rowtype;
+begin
+  perform public.require_admin();
+  select * into v_match from public.matches where id=p_match_id for update;
+  if not found then raise exception 'Partita non trovata'; end if;
+  perform public.lock_tournament(v_match.tournament_id);
+  if v_match.status not in('queued','called','ready','playing','awaiting_result') then raise exception 'Questa partita non può essere assegnata a un campo'; end if;
+  if not exists(select 1 from public.fields where id=p_field_id and tournament_id=v_match.tournament_id and is_active) then raise exception 'Campo non valido o disattivato'; end if;
+  if exists(select 1 from public.matches where field_id=p_field_id and id<>p_match_id and status in('called','ready','playing','awaiting_result')) then raise exception 'Il campo selezionato è occupato'; end if;
+
+  update public.matches set
+    field_id=p_field_id,
+    status=case when status='queued' then 'called'::public.match_status else status end,
+    queue_position=case when status='queued' then null else queue_position end,
+    called_at=case when status='queued' then now() else called_at end
+  where id=p_match_id returning * into v_match;
+
+  insert into public.match_events(tournament_id,match_id,event_type,actor_user_id,payload)
+  values(v_match.tournament_id,p_match_id,'field_changed',auth.uid(),jsonb_build_object('field_id',p_field_id));
+  perform public.engine_normalize_queue(v_match.tournament_id);
+  perform public.engine_fill_free_fields(v_match.tournament_id);
+  return v_match;
+end;
+$$;
+revoke all on function public.admin_assign_match_field(uuid,uuid) from public;
+grant execute on function public.admin_assign_match_field(uuid,uuid) to authenticated;
+
+-- Editable settings/rules. Running/finished matches keep their snapshot;
+-- scheduled/queued/called/ready matches receive the new rules immediately.
+create or replace function public.admin_update_tournament_rules(
+  p_tournament_id uuid,
+  p_pause_enabled boolean,
+  p_qualifiers_per_group integer,
+  p_third_place_enabled boolean,
+  p_team_pin_enabled boolean,
+  p_group_duration integer,
+  p_group_goal integer,
+  p_knockout_duration integer,
+  p_knockout_goal integer,
+  p_final_duration integer,
+  p_final_goal integer,
+  p_third_duration integer,
+  p_third_goal integer
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare v_phase public.tournament_phase;
+begin
+  perform public.require_admin(); perform public.lock_tournament(p_tournament_id);
+  select phase into v_phase from public.tournaments where id=p_tournament_id;
+  if not found then raise exception 'Torneo non trovato'; end if;
+  if p_qualifiers_per_group < 1 then raise exception 'Le qualificate per girone devono essere almeno 1'; end if;
+  if (p_group_duration is null and p_group_goal is null) or (p_knockout_duration is null and p_knockout_goal is null)
+     or (p_final_duration is null and p_final_goal is null) or (p_third_duration is null and p_third_goal is null) then
+    raise exception 'Ogni tipo di partita deve avere timer, target goal o entrambi';
+  end if;
+  if v_phase <> 'groups' and exists(select 1 from public.matches where tournament_id=p_tournament_id and stage<>'group') then
+    if p_qualifiers_per_group <> (select qualifiers_per_group from public.tournament_settings where tournament_id=p_tournament_id)
+       or p_third_place_enabled <> (select third_place_enabled from public.tournament_settings where tournament_id=p_tournament_id) then
+      raise exception 'Qualificate e terzo posto non possono cambiare dopo la generazione del tabellone';
+    end if;
+  end if;
+  if exists(
+    select g.id
+    from public.groups g
+    left join public.group_teams gt on gt.group_id=g.id and gt.tournament_id=g.tournament_id
+    left join public.teams tm on tm.id=gt.team_id and tm.status='active'
+    where g.tournament_id=p_tournament_id
+    group by g.id
+    having count(tm.id) < p_qualifiers_per_group
+  ) then
+    raise exception 'Ogni girone deve avere almeno tante squadre attive quante sono le qualificate richieste';
+  end if;
+  if p_team_pin_enabled and exists(select 1 from public.teams where tournament_id=p_tournament_id and status='active' and team_pin_hash is null) then
+    raise exception 'Prima di attivare i PIN assegna un PIN a tutte le squadre attive';
+  end if;
+
+  update public.tournament_settings set
+    pause_enabled=p_pause_enabled,
+    qualifiers_per_group=p_qualifiers_per_group,
+    third_place_enabled=p_third_place_enabled,
+    team_pin_enabled=p_team_pin_enabled
+  where tournament_id=p_tournament_id;
+
+  update public.match_rule_sets set duration_seconds=p_group_duration,goal_target=p_group_goal where tournament_id=p_tournament_id and scope='group';
+  update public.match_rule_sets set duration_seconds=p_knockout_duration,goal_target=p_knockout_goal where tournament_id=p_tournament_id and scope='knockout';
+  update public.match_rule_sets set duration_seconds=p_final_duration,goal_target=p_final_goal where tournament_id=p_tournament_id and scope='final';
+  update public.match_rule_sets set duration_seconds=p_third_duration,goal_target=p_third_goal where tournament_id=p_tournament_id and scope='third_place';
+
+  update public.matches m set
+    duration_seconds=r.duration_seconds,
+    goal_target=r.goal_target,
+    pause_allowed=p_pause_enabled
+  from public.match_rule_sets r
+  where m.tournament_id=p_tournament_id
+    and m.status in('scheduled','queued','called','ready')
+    and r.tournament_id=p_tournament_id
+    and r.scope=(case m.stage when 'group' then 'group'::public.rule_scope when 'knockout' then 'knockout'::public.rule_scope when 'final' then 'final'::public.rule_scope else 'third_place'::public.rule_scope end);
+end;
+$$;
+revoke all on function public.admin_update_tournament_rules(uuid,boolean,integer,boolean,boolean,integer,integer,integer,integer,integer,integer,integer,integer) from public;
+grant execute on function public.admin_update_tournament_rules(uuid,boolean,integer,boolean,boolean,integer,integer,integer,integer,integer,integer,integer,integer) to authenticated;
+
+commit;
