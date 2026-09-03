@@ -77,7 +77,7 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
       {bundle.settings.emergency_paused && <TournamentPausedOverlay />}
       <header className="app-header">
         <button className="icon-button" aria-label="Cambia torneo" onClick={() => { window.localStorage.removeItem(LAST_PLAYER_TOURNAMENT_KEY); navigate('/?choose=1'); }}>←</button>
-        <div><strong>{bundle.tournament.name}</strong><span>Baby ti porto al biliardino</span></div>
+        <div><strong>Baby Ti Porto al Biliardino</strong><span>{bundle.tournament.name}</span></div>
         <div className={online && !cachedAt ? 'status-dot' : 'status-dot offline'} title={online && !cachedAt ? 'online' : 'dati non aggiornati'} />
       </header>
 
