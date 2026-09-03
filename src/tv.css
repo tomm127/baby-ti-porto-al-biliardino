@@ -590,3 +590,35 @@
   .tv-v2 .tv-footer { grid-template-columns: 1fr auto; }
   .tv-v2 .tv-footer-brand { display: none; }
 }
+
+
+/* TV prepare half-centering fix */
+.tv-v2 .tv-prepare-match {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  gap: clamp(14px, 1vw, 24px) !important;
+  align-items: center !important;
+}
+
+.tv-v2 .tv-prepare-match strong {
+  width: 100% !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+.tv-v2 .tv-prepare-match strong:first-child {
+  text-align: center !important;
+  justify-self: stretch !important;
+  padding-right: 0 !important;
+}
+
+.tv-v2 .tv-prepare-match strong:last-child {
+  text-align: center !important;
+  justify-self: stretch !important;
+  padding-left: 0 !important;
+}
+
+.tv-v2 .tv-prepare-match span {
+  justify-self: center !important;
+  text-align: center !important;
+}
