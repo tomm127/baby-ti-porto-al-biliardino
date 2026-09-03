@@ -105,7 +105,7 @@ button { cursor:pointer; }
 .team-chooser select,.form-panel select,.form-panel input,.form-panel textarea,.admin-top select { width:100%; padding:13px; border:1px solid #d9d9d2; border-radius:11px; background:#fff; }
 .team-chooser { gap:13px; }
 .urgent { outline:3px solid #111; box-shadow:0 16px 46px rgba(0,0,0,.18); cursor:pointer; }
-.tap-hint { margin-top:18px; padding-top:14px; border-top:1px solid #333; font-size:12px; font-weight:800; }
+.tap-hint { margin-top:18px; padding-top:16px; border-top:1px solid #333; font-size:17px; font-weight:950; letter-spacing:-.01em; }
 .muted-on-dark { color:#aaa; }
 .group-stack { display:grid; gap:16px; }
 .table-row.highlighted { background:#f2f2ed; margin:0 -10px; padding-left:10px; padding-right:10px; border-radius:8px; }
@@ -343,6 +343,7 @@ button:disabled { cursor:not-allowed; }
 .ahead-hero { display:grid; place-items:center; padding:18px 8px 8px; border-top:1px solid #343434; margin-top:20px; text-align:center; }
 .ahead-hero strong { font-size:clamp(48px,15vw,86px); line-height:.9; letter-spacing:-.07em; }
 .ahead-hero span { margin-top:8px; font-size:11px; font-weight:950; letter-spacing:.12em; }
+.ahead-hero small { margin-top:7px; color:#8c8c8c; font-size:10px; font-weight:650; letter-spacing:0; text-transform:none; }
 .next-field { text-align:center; color:#aaa; font-size:12px; margin-top:10px; }
 .player-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0 0; }
 .player-stats>div { background:#fff; border-radius:15px; padding:14px 8px; display:grid; place-items:center; gap:3px; text-align:center; }
