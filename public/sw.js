@@ -1,5 +1,5 @@
-const CACHE = 'baby-biliardino-shell-v3';
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/badge-96.png'];
+const CACHE = 'baby-biliardino-shell-v4';
+const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
@@ -53,7 +53,7 @@ self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data?.text() ?? '' }; }
 
-  const title = data.title || 'Baby ti porto al biliardino';
+  const title = data.title || 'BTPB';
   const called = data.kind === 'called';
   const options = {
     body: data.body || 'Aggiornamento torneo',
