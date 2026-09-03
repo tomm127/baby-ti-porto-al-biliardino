@@ -8,7 +8,6 @@ import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 import '../tv.css';
 
-const GROUPS_PER_PAGE = 2;
 const GROUP_ROTATION_MS = 8000;
 
 export function ScreenPage({ slug }: { slug: string }) {
@@ -47,7 +46,9 @@ export function ScreenPage({ slug }: { slug: string }) {
   }, []);
 
   const standings = useMemo(() => bundle ? buildStandings(bundle) : [], [bundle]);
-  const groupPageCount = Math.max(1, Math.ceil(standings.length / GROUPS_PER_PAGE));
+  // Ogni 8 secondi avanziamo di UN girone.
+  // Anche con due gironi: A/B -> B/A, così la rotazione è visibile.
+  const groupPageCount = Math.max(1, standings.length);
 
   useEffect(() => {
     if (groupPageCount <= 1) { setGroupPage(0); return; }
@@ -91,8 +92,9 @@ export function ScreenPage({ slug }: { slug: string }) {
   const queue = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder).slice(0, 10);
   const prepare = queue[0];
   const restQueue = queue.slice(1);
-  const leftGroup = standings.length ? standings[(groupPage * GROUPS_PER_PAGE) % standings.length] : undefined;
-  const rightGroup = standings.length > 1 ? standings[(groupPage * GROUPS_PER_PAGE + 1) % standings.length] : undefined;
+  const nextListStyle = { '--tv-next-count': String(Math.max(restQueue.length, 1)) } as CSSProperties;
+  const leftGroup = standings.length ? standings[groupPage % standings.length] : undefined;
+  const rightGroup = standings.length > 1 ? standings[(groupPage + 1) % standings.length] : undefined;
   const playerUrl = `${window.location.origin}/tournament/${bundle.tournament.slug}`;
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(playerUrl)}&size=180&margin=1&ecLevel=M`;
   const fieldColumns = activeFields.length <= 4 ? Math.max(activeFields.length, 1) : Math.ceil(activeFields.length / 2);
@@ -106,7 +108,7 @@ export function ScreenPage({ slug }: { slug: string }) {
       <div className="tv-prepare-match"><strong>{teamName(bundle, prepare.team1_id)}</strong><span>VS</span><strong>{teamName(bundle, prepare.team2_id)}</strong></div>
     </div> : <div className="tv-empty-queue">Nessuna partita in coda</div>}
 
-    <div className="tv-next-list">
+    <div className="tv-next-list" style={nextListStyle}>
       {restQueue.map((match, index) => <div className="tv-next-row" key={match.id}>
         <span>{index + 2}</span>
         <div><small>{stageLabel(bundle, match)}</small><strong>{teamName(bundle, match.team1_id)} <em>vs</em> {teamName(bundle, match.team2_id)}</strong></div>
