@@ -5,7 +5,7 @@ import {
   endMatchEarly,
   getMyTeamAssignment,
   leaveTeam,
-  loadTournamentBundle,
+  loadTournamentBundleResilient,
   markTimerExpired,
   pauseMatch,
   resumeMatch,
@@ -19,6 +19,8 @@ import { disableNotifications, enableNotifications, getNotificationState, type N
 import { usePwaInstall } from '../lib/pwaInstall.ts';
 import { navigate } from '../router.ts';
 import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
+import { useConnectivity } from '../lib/useConnectivity.ts';
+import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 
 interface Props { slug: string; matchId?: string; }
 
@@ -35,13 +37,16 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
   const [tab, setTab] = useState<Tab>('home');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const next = await loadTournamentBundle(slug);
+      const result = await loadTournamentBundleResilient(slug);
+      const next = result.bundle;
       const assignment = await getMyTeamAssignment(next.tournament.id);
       setBundle(next);
       setTeamId(assignment);
+      setCachedAt(result.source === 'cache' ? result.cachedAt : null);
       setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -50,15 +55,17 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
     }
   }, [slug]);
 
+  const online = useConnectivity(() => void refresh());
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
+    if (!online) return;
     const id = window.setInterval(() => void refresh(), 15000);
     return () => window.clearInterval(id);
-  }, [refresh]);
+  }, [refresh, online]);
 
   if (loading) return <CenteredMessage title="Caricamento torneo…" />;
   if (error || !bundle) return <CenteredMessage title="Non riesco ad aprire il torneo" body={error} back />;
-  if (!teamId) return <TeamChooser bundle={bundle} onChosen={refresh} />;
+  if (!teamId) return <><ConnectionBanner online={online} cachedAt={cachedAt} /><TeamChooser bundle={bundle} onChosen={refresh} /></>;
 
   const team = bundle.teams.find((t) => t.id === teamId);
   if (!team) return <CenteredMessage title="Squadra non trovata" body="Cambia associazione del dispositivo." back />;
@@ -68,10 +75,11 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
       <header className="app-header">
         <button className="icon-button" onClick={() => navigate('/')}>←</button>
         <div><strong>{bundle.tournament.name}</strong><span>Baby ti porto al biliardino</span></div>
-        <div className="status-dot" title="online" />
+        <div className={online && !cachedAt ? 'status-dot' : 'status-dot offline'} title={online && !cachedAt ? 'online' : 'dati non aggiornati'} />
       </header>
 
       <section className="content">
+        <ConnectionBanner online={online} cachedAt={cachedAt} />
         {tab === 'home' && <PlayerHome bundle={bundle} teamId={teamId} onRefresh={refresh} />}
         {tab === 'gironi' && <GroupsView bundle={bundle} highlightTeamId={teamId} />}
         {tab === 'tabellone' && <section className="panel bracket-player-panel"><div className="panel-title"><h2>Tabellone</h2><span>{bundle.tournament.phase === 'groups' ? 'dopo i gironi' : 'eliminazione diretta'}</span></div><KnockoutBracket bundle={bundle} /></section>}
@@ -198,6 +206,7 @@ function SearchableTeamPicker({
 }
 
 function TeamChooser({ bundle, onChosen }: { bundle: TournamentBundle; onChosen: () => Promise<void> }) {
+  const online = useConnectivity();
   const [selected, setSelected] = useState('');
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
@@ -222,7 +231,8 @@ function TeamChooser({ bundle, onChosen }: { bundle: TournamentBundle; onChosen:
     <SearchableTeamPicker teams={bundle.teams} selectedId={selected} onSelect={(teamId) => { setSelected(teamId); setPin(''); }} />
     {bundle.settings.team_pin_enabled && selected && <><label>PIN squadra</label><input inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" /></>}
     {error && <div className="alert error">{error}</div>}
-    <button className="button primary" disabled={busy || !selected} onClick={() => void choose()}>{busy ? 'Associazione…' : 'Questa è la mia squadra'}</button>
+    {!online && <div className="alert warning">Per associare questo dispositivo a una squadra serve la connessione.</div>}
+    <button className="button primary" disabled={busy || !selected || !online} onClick={() => void choose()}>{busy ? 'Associazione…' : 'Questa è la mia squadra'}</button>
   </section></main>;
 }
 
@@ -332,6 +342,7 @@ function TeamMatches({ bundle, teamId }: { bundle: TournamentBundle; teamId: str
 }
 
 function MyTeam({ bundle, teamId, onChanged }: { bundle: TournamentBundle; teamId: string; onChanged: () => Promise<void> }) {
+  const online = useConnectivity();
   const [newTeamId, setNewTeamId] = useState(teamId);
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
@@ -347,13 +358,14 @@ function MyTeam({ bundle, teamId, onChanged }: { bundle: TournamentBundle; teamI
     try { await leaveTeam(bundle.tournament.id); await onChanged(); }
     finally { setBusy(false); }
   }
-  return <section className="panel form-panel"><h2>La mia squadra</h2><label>Squadra associata</label><select value={newTeamId} onChange={(e) => { setNewTeamId(e.target.value); setPin(''); }}>{bundle.teams.filter((t) => t.status === 'active').map((t) => <option value={t.id} key={t.id}>{t.name}</option>)}</select>{bundle.settings.team_pin_enabled && newTeamId !== teamId && <><label>PIN nuova squadra</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{error}</div>}<button className="button primary" disabled={busy || newTeamId === teamId} onClick={() => void change()}>Cambia squadra</button><button className="button ghost" disabled={busy} onClick={() => void remove()}>Dissocia questo dispositivo</button></section>;
+  return <section className="panel form-panel"><h2>La mia squadra</h2><label>Squadra associata</label><select value={newTeamId} onChange={(e) => { setNewTeamId(e.target.value); setPin(''); }}>{bundle.teams.filter((t) => t.status === 'active').map((t) => <option value={t.id} key={t.id}>{t.name}</option>)}</select>{bundle.settings.team_pin_enabled && newTeamId !== teamId && <><label>PIN nuova squadra</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{error}</div>}<button className="button primary" disabled={busy || !online || newTeamId === teamId} onClick={() => void change()}>Cambia squadra</button><button className="button ghost" disabled={busy || !online} onClick={() => void remove()}>Dissocia questo dispositivo</button></section>;
 }
 
 function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   const [bundle, setBundle] = useState<TournamentBundle | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(Date.now());
   const [score1, setScore1] = useState('');
@@ -364,16 +376,19 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
 
   const refresh = useCallback(async () => {
     try {
-      const b = await loadTournamentBundle(slug);
+      const result = await loadTournamentBundleResilient(slug);
+      const b = result.bundle;
       setBundle(b);
       setTeamId(await getMyTeamAssignment(b.tournament.id));
+      setCachedAt(result.source === 'cache' ? result.cachedAt : null);
       setError('');
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   }, [slug]);
 
+  const online = useConnectivity(() => void refresh());
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { const id = window.setInterval(() => setTick(Date.now()), 250); return () => window.clearInterval(id); }, []);
-  useEffect(() => { const id = window.setInterval(() => void refresh(), 3000); return () => window.clearInterval(id); }, [refresh]);
+  useEffect(() => { if (!online) return; const id = window.setInterval(() => void refresh(), 3000); return () => window.clearInterval(id); }, [refresh, online]);
 
   const match = bundle?.matches.find((m) => m.id === matchId);
   const remaining = match ? secondsRemaining(match) : null;
@@ -381,10 +396,10 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
 
   useEffect(() => {
     void tick;
-    if (!match || match.status !== 'playing' || match.duration_seconds == null || remaining !== 0 || countdown > 0 || expiring.current) return;
+    if (!online || !match || match.status !== 'playing' || match.duration_seconds == null || remaining !== 0 || countdown > 0 || expiring.current) return;
     expiring.current = true;
     markTimerExpired(match.id).then(refresh).catch((e) => setError(e instanceof Error ? e.message : String(e))).finally(() => { expiring.current = false; });
-  }, [tick, match, remaining, countdown, refresh]);
+  }, [tick, online, match, remaining, countdown, refresh]);
 
   if (error && !bundle) return <CenteredMessage title="Errore partita" body={error} back />;
   if (!bundle || !match) return <CenteredMessage title="Caricamento partita…" />;
@@ -409,15 +424,16 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   }
 
   return <main className="match-screen">
+    <ConnectionBanner online={online} cachedAt={cachedAt} />
     <header className="match-top"><button className="icon-button light" onClick={() => navigate(`/tournament/${slug}`)}>←</button><div><span>{bundle.tournament.name}</span><strong>{field}</strong></div></header>
     <section className="match-stage">
       <div className="match-team-names"><strong>{a}</strong><span>VS</span><strong>{b}</strong></div>
       {match.status === 'playing' && countdown > 0 && <div className="countdown"><span>{countdown}</span><small>PREPARATEVI</small></div>}
-      {match.status === 'playing' && countdown === 0 && <><div className="match-clock">{match.duration_seconds == null ? 'IN CORSO' : formatClock(remaining)}</div>{match.goal_target && <div className="target-label">Primo a {match.goal_target} · oppure fine tempo</div>}</>}
-      {['called','ready'].includes(match.status) && <><div className="waiting-title">Siete sul campo.</div><button className="giant-button" disabled={busy} onClick={() => void action(() => startMatch(match.id))}>AVVIA PARTITA</button></>}
-      {match.status === 'playing' && countdown === 0 && <div className="match-controls">{match.pause_allowed && (match.paused_at ? <button disabled={busy || confirmEnd} onClick={() => void action(() => resumeMatch(match.id))}>Riprendi</button> : <button disabled={busy || confirmEnd} onClick={() => void action(() => pauseMatch(match.id))}>Pausa</button>)}<button className="danger-soft" disabled={busy || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina partita</button></div>}
-      {confirmEnd && match.status === 'playing' && <div className="confirm-result end-match-confirm"><strong>Concludere la partita?</strong><p>La partita verrà chiusa e si passerà all’inserimento del risultato.</p><div><button disabled={busy} onClick={() => setConfirmEnd(false)}>Continua a giocare</button><button className="confirm end-confirm-button" disabled={busy} onClick={() => { setConfirmEnd(false); void action(() => endMatchEarly(match.id)); }}>CONCLUDI PARTITA</button></div></div>}
-      {match.status === 'awaiting_result' && <section className="score-entry"><div className="eyebrow light-text">PARTITA TERMINATA</div>{match.stage !== 'group' && <p>Se eravate pari allo scadere, continuate a giocare il <strong>golden goal</strong>. Poi inserite il risultato finale.</p>}<div className="score-inputs"><label><span>{a}</span><input type="number" min="0" inputMode="numeric" value={score1} onChange={(e) => { setScore1(e.target.value); setConfirming(false); }} /></label><strong>–</strong><label><span>{b}</span><input type="number" min="0" inputMode="numeric" value={score2} onChange={(e) => { setScore2(e.target.value); setConfirming(false); }} /></label></div>{!confirming ? <button className="giant-button" onClick={() => setConfirming(true)}>Controlla risultato</button> : <div className="confirm-result"><strong>Confermi {a} {score1 || '0'} – {score2 || '0'} {b}?</strong><p>Dopo la conferma solo l'admin potrà modificarlo.</p><div><button onClick={() => setConfirming(false)}>Indietro</button><button className="confirm" disabled={busy} onClick={() => void submit()}>CONFERMA</button></div></div>}</section>}
+      {match.status === 'playing' && countdown === 0 && <><div className="match-clock">{match.duration_seconds == null ? 'IN CORSO' : formatClock(remaining)}</div>{match.goal_target && <div className="target-label">Primo a {match.goal_target} · oppure fine tempo</div>}{!online && remaining === 0 && <div className="offline-match-note">Tempo terminato. Continuate a giocare: appena torna la connessione passeremo automaticamente all'inserimento del risultato.</div>}</>}
+      {['called','ready'].includes(match.status) && <><div className="waiting-title">Siete sul campo.</div><button className="giant-button" disabled={busy || !online} onClick={() => void action(() => startMatch(match.id))}>AVVIA PARTITA</button></>}
+      {match.status === 'playing' && countdown === 0 && <div className="match-controls">{match.pause_allowed && (match.paused_at ? <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => resumeMatch(match.id))}>Riprendi</button> : <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => pauseMatch(match.id))}>Pausa</button>)}<button className="danger-soft" disabled={busy || !online || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina partita</button></div>}
+      {confirmEnd && match.status === 'playing' && <div className="confirm-result end-match-confirm"><strong>Concludere la partita?</strong><p>La partita verrà chiusa e si passerà all’inserimento del risultato.</p><div><button disabled={busy} onClick={() => setConfirmEnd(false)}>Continua a giocare</button><button className="confirm end-confirm-button" disabled={busy || !online} onClick={() => { setConfirmEnd(false); void action(() => endMatchEarly(match.id)); }}>CONCLUDI PARTITA</button></div></div>}
+      {match.status === 'awaiting_result' && <section className="score-entry"><div className="eyebrow light-text">PARTITA TERMINATA</div>{match.stage !== 'group' && <p>Se eravate pari allo scadere, continuate a giocare il <strong>golden goal</strong>. Poi inserite il risultato finale.</p>}<div className="score-inputs"><label><span>{a}</span><input type="number" min="0" inputMode="numeric" value={score1} onChange={(e) => { setScore1(e.target.value); setConfirming(false); }} /></label><strong>–</strong><label><span>{b}</span><input type="number" min="0" inputMode="numeric" value={score2} onChange={(e) => { setScore2(e.target.value); setConfirming(false); }} /></label></div>{!confirming ? <button className="giant-button" disabled={!online} onClick={() => setConfirming(true)}>Controlla risultato</button> : <div className="confirm-result"><strong>Confermi {a} {score1 || '0'} – {score2 || '0'} {b}?</strong><p>Dopo la conferma solo l'admin potrà modificarlo.</p><div><button onClick={() => setConfirming(false)}>Indietro</button><button className="confirm" disabled={busy || !online} onClick={() => void submit()}>CONFERMA</button></div></div>}</section>}
       {['finished','forfeit'].includes(match.status) && <section className="finished-result"><div className="eyebrow light-text">RISULTATO REGISTRATO</div><div>{match.score_team1} <span>–</span> {match.score_team2}</div><button onClick={() => navigate(`/tournament/${slug}`)}>Torna al torneo</button></section>}
       {error && <div className="alert error match-error">{error}</div>}
     </section>
