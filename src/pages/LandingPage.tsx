@@ -38,7 +38,12 @@ export function LandingPage() {
     if (!rememberedSlug) return;
 
     setResumingPlayer(true);
-    navigate(`/tournament/${rememberedSlug}`);
+
+    // Use a real same-origin navigation here instead of the SPA navigate()
+    // helper. LandingPage's effect can run before App has attached its
+    // popstate listener, which previously left the UI stuck on
+    // "Apro la tua squadra…".
+    window.location.replace(`/tournament/${encodeURIComponent(rememberedSlug)}`);
   }, []);
 
   useEffect(() => { if (!resumingPlayer) void refresh(); }, [refresh, resumingPlayer]);
