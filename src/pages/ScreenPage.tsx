@@ -75,28 +75,48 @@ export function ScreenPage({ slug }: { slug: string }) {
   const activeFields = bundle.fields.filter((field) => field.is_active).sort((a,b) => a.sort_order - b.sort_order);
   const live = bundle.matches.filter((m) => ['called','ready','playing','awaiting_result'].includes(m.status));
   const byField = new Map(live.filter((m) => m.field_id).map((m) => [m.field_id!, m]));
-  const queue = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder).slice(0, 10);
-  const prepare = queue[0];
-  const restQueue = queue.slice(1);
-  const nextListStyle = { '--tv-next-count': String(Math.max(restQueue.length, 1)) } as CSSProperties;
+  const allQueued = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder);
+  const queue = allQueued.slice(0, 10);
+  const queueSlots = Array.from({ length: 10 }, (_, index) => queue[index] ?? null);
   const playerUrl = `${window.location.origin}/tournament/${bundle.tournament.slug}`;
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(playerUrl)}&size=180&margin=1&ecLevel=M`;
   const fieldColumns = activeFields.length <= 4 ? Math.max(activeFields.length, 1) : Math.ceil(activeFields.length / 2);
   const fieldStyle = { '--tv-field-cols': String(fieldColumns) } as CSSProperties;
 
-  const queuePanel = <div className="tv-queue-panel">
-    <div className="tv-section-title"><span>PROSSIME PARTITE</span><strong>{queue.length ? `${queue.length} IN CODA` : 'NESSUNA IN CODA'}</strong></div>
-    {prepare ? <div className={prepareFlash ? 'tv-prepare flash' : 'tv-prepare'}>
-      <div className="tv-prepare-label">PREPARATEVI</div>
-      <div className="tv-prepare-stage">{stageLabel(bundle, prepare)}</div>
-      <div className="tv-prepare-match"><strong>{teamName(bundle, prepare.team1_id)}</strong><span>VS</span><strong>{teamName(bundle, prepare.team2_id)}</strong></div>
-    </div> : <div className="tv-empty-queue">Nessuna partita in coda</div>}
+  const queuePanel = <div className="tv-queue-panel tv-queue-fixed-10">
+    <div className="tv-section-title"><span>PROSSIME PARTITE</span><strong>{allQueued.length ? `${allQueued.length} IN CODA` : 'NESSUNA IN CODA'}</strong></div>
 
-    <div className="tv-next-list" style={nextListStyle}>
-      {restQueue.map((match, index) => <div className="tv-next-row" key={match.id}>
-        <span>{index + 2}</span>
-        <div><small>{stageLabel(bundle, match)}</small><strong>{teamName(bundle, match.team1_id)} <em>vs</em> {teamName(bundle, match.team2_id)}</strong></div>
-      </div>)}
+    <div className="tv-fixed-queue-list">
+      {queueSlots.map((match, index) => {
+        const isPrepare = index === 0 && Boolean(match);
+
+        if (!match) {
+          return <div className="tv-fixed-queue-row empty" key={`empty-${index}`}>
+            <span className="tv-fixed-queue-number">{index + 1}</span>
+            <div className="tv-fixed-queue-empty-line" />
+          </div>;
+        }
+
+        return <div
+          className={isPrepare
+            ? (prepareFlash ? 'tv-fixed-queue-row prepare flash' : 'tv-fixed-queue-row prepare')
+            : 'tv-fixed-queue-row'}
+          key={match.id}
+        >
+          <span className="tv-fixed-queue-number">{index + 1}</span>
+          <div className="tv-fixed-queue-content">
+            <div className="tv-fixed-queue-meta">
+              {isPrepare && <strong>PREPARATEVI</strong>}
+              <small>{stageLabel(bundle, match)}</small>
+            </div>
+            <div className="tv-fixed-queue-match">
+              <strong>{teamName(bundle, match.team1_id)}</strong>
+              <em>vs</em>
+              <strong>{teamName(bundle, match.team2_id)}</strong>
+            </div>
+          </div>
+        </div>;
+      })}
     </div>
   </div>;
 

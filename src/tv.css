@@ -1066,3 +1066,158 @@
 }
 
 /* BTPB TV SIDE LAYOUT V1 END */
+
+/* BTPB TV FIXED 10 QUEUE ROWS V1 START */
+
+/* The right-hand queue is always a stable 10-row grid.
+   If fewer than 10 matches exist, the remaining numbered rows stay visible. */
+.tv-v2 .tv-queue-fixed-10 {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+}
+
+.tv-v2 .tv-fixed-queue-list {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: repeat(10, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-row {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: clamp(30px, 1.8vw, 38px) minmax(0, 1fr);
+  gap: clamp(9px, .62vw, 13px);
+  align-items: center;
+  padding: clamp(5px, .42vh, 9px) clamp(3px, .2vw, 5px);
+  border-bottom: 1px solid #e4e0d7;
+}
+
+.tv-v2 .tv-fixed-queue-number {
+  color: #8d908d !important;
+  font-size: clamp(17px, 1vw, 21px);
+  font-weight: 950;
+  text-align: left;
+}
+
+.tv-v2 .tv-fixed-queue-content {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(104px, .25fr) minmax(0, 1fr);
+  gap: clamp(10px, .75vw, 16px);
+  align-items: center;
+}
+
+.tv-v2 .tv-fixed-queue-meta {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.tv-v2 .tv-fixed-queue-meta > strong {
+  color: #6e5c28 !important;
+  font-size: clamp(14px, .88vw, 18px);
+  font-weight: 1000;
+  letter-spacing: .08em;
+}
+
+.tv-v2 .tv-fixed-queue-meta > small {
+  color: var(--tv-muted) !important;
+  font-size: clamp(14px, .86vw, 18px);
+  font-weight: 850;
+  line-height: 1.04;
+}
+
+.tv-v2 .tv-fixed-queue-match {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  align-items: center;
+  gap: clamp(7px, .48vw, 10px);
+  font-size: clamp(20px, 1.28vw, 28px);
+  line-height: 1;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong {
+  min-width: 0;
+  color: var(--tv-ink) !important;
+  font-weight: 950;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong:first-child {
+  text-align: right;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong:last-child {
+  text-align: left;
+}
+
+.tv-v2 .tv-fixed-queue-match > em {
+  color: #979b98 !important;
+  font-size: .62em;
+  font-style: normal;
+  font-weight: 900;
+}
+
+/* First row = PREPARATEVI, visually distinct but still the same row height. */
+.tv-v2 .tv-fixed-queue-row.prepare {
+  margin: 2px 0;
+  padding-left: clamp(8px, .55vw, 12px);
+  padding-right: clamp(8px, .55vw, 12px);
+  border: 1px solid #d7c186;
+  border-radius: clamp(11px, .75vw, 15px);
+  background: var(--tv-gold-soft) !important;
+}
+
+.tv-v2 .tv-fixed-queue-row.prepare.flash {
+  animation: tvPrepareFixedRowPulse 2.8s ease-out;
+}
+
+@keyframes tvPrepareFixedRowPulse {
+  0%, 35% {
+    background: #e9ddb8 !important;
+    transform: scale(1.006);
+  }
+  100% {
+    background: var(--tv-gold-soft) !important;
+    transform: none;
+  }
+}
+
+/* Empty rows stay visible instead of collapsing. */
+.tv-v2 .tv-fixed-queue-row.empty {
+  opacity: .72;
+}
+
+.tv-v2 .tv-fixed-queue-row.empty .tv-fixed-queue-number {
+  color: #b3b4af !important;
+}
+
+.tv-v2 .tv-fixed-queue-empty-line {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, #e9e5dc 0%, #efebe3 58%, transparent 100%);
+}
+
+/* Old queue elements are no longer used in the fixed-10 layout. */
+.tv-v2 .tv-queue-fixed-10 .tv-prepare,
+.tv-v2 .tv-queue-fixed-10 .tv-next-list,
+.tv-v2 .tv-queue-fixed-10 .tv-empty-queue {
+  display: none !important;
+}
+
+@media (max-width: 1350px) {
+  .tv-v2 .tv-fixed-queue-content {
+    grid-template-columns: minmax(88px, .24fr) minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .tv-v2 .tv-fixed-queue-match {
+    font-size: clamp(18px, 1.18vw, 24px);
+  }
+}
+
+/* BTPB TV FIXED 10 QUEUE ROWS V1 END */
