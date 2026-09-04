@@ -2881,3 +2881,90 @@ button:disabled { cursor:not-allowed; }
   }
 }
 /* BTPB PLAYER TURN COPY V1 END */
+
+/* BTPB RESUME LANDING QUEUE V1 START */
+.landing-v2 .landing-play-v2 {
+  min-height: 190px;
+  padding: 24px 18px;
+}
+
+.landing-v2 .landing-play-v2 strong {
+  font-size: clamp(58px, 16vw, 94px);
+}
+
+.landing-v2 .landing-play-v2 span {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.landing-v2 .landing-tv-v2 {
+  min-height: 46px;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: 13px;
+}
+
+.landing-v2 .landing-tv-v2 strong {
+  font-size: 18px;
+}
+
+.landing-resuming-player {
+  display: grid !important;
+  place-items: center;
+}
+
+.landing-resume-copy {
+  color: #68727a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.app-shell .ahead-hero .ahead-queue-label {
+  margin: 0 0 9px;
+  color: #6f5d2d;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .18em;
+  line-height: 1;
+}
+
+.app-shell .ahead-hero .ahead-fields-note {
+  margin-top: 9px;
+}
+
+.app-shell .ahead-hero span {
+  font-size: clamp(15px, 4vw, 17px) !important;
+}
+
+.app-shell .tap-hint {
+  min-height: 58px;
+  margin-top: 17px;
+  padding: 17px 18px;
+  display: grid;
+  place-items: center;
+  background: #18283a;
+  color: #fff;
+  border: 2px solid #18283a;
+  border-radius: 15px;
+  box-shadow: 0 7px 18px rgba(24,40,58,.14);
+  font-size: clamp(18px, 5vw, 22px);
+  font-weight: 950;
+  letter-spacing: .015em;
+}
+
+@media (min-width: 700px) {
+  .landing-v2 .landing-play-v2 {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-v2 .landing-play-v2 {
+    min-height: 178px;
+  }
+
+  .landing-v2 .landing-tv-v2 {
+    min-height: 44px;
+  }
+}
+/* BTPB RESUME LANDING QUEUE V1 END */

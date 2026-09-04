@@ -5,11 +5,14 @@ import { useConnectivity } from '../lib/useConnectivity.ts';
 import { navigate } from '../router.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 
+const LAST_PLAYER_TOURNAMENT_KEY = 'btpb:last-player-tournament';
+
 export function LandingPage() {
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [loading, setLoading] = useState(hasSupabaseConfig);
   const [error, setError] = useState('');
   const [cachedAt, setCachedAt] = useState<string | null>(null);
+  const [resumingPlayer, setResumingPlayer] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!hasSupabaseConfig) return;
@@ -26,7 +29,25 @@ export function LandingPage() {
   }, []);
 
   const online = useConnectivity(() => void refresh());
-  useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    const chooseExplicitly = new URLSearchParams(window.location.search).get('choose') === '1';
+    if (chooseExplicitly) return;
+
+    const rememberedSlug = window.localStorage.getItem(LAST_PLAYER_TOURNAMENT_KEY);
+    if (!rememberedSlug) return;
+
+    setResumingPlayer(true);
+    navigate(`/tournament/${rememberedSlug}`);
+  }, []);
+
+  useEffect(() => { if (!resumingPlayer) void refresh(); }, [refresh, resumingPlayer]);
+
+  if (resumingPlayer) {
+    return <main className="page landing-page landing-v2 landing-resuming-player">
+      <div className="landing-resume-copy">Apro la tua squadra…</div>
+    </main>;
+  }
 
   return (
     <main className="page landing-page landing-v2">
@@ -80,8 +101,8 @@ export function LandingPage() {
                 className="landing-play-v2"
                 onClick={() => navigate(`/tournament/${t.slug}`)}
               >
-                <strong>GIOCA</strong>
-                <span>Gioca / segui il torneo</span>
+                <strong>PARTECIPA</strong>
+                <span>Entra nel torneo</span>
               </button>
 
               <button

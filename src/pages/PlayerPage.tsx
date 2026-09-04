@@ -272,7 +272,7 @@ function PlayerHome({ bundle, teamId }: { bundle: TournamentBundle; teamId: stri
   const allQueued = bundle.matches.filter((m) => m.status === 'queued' && m.team1_id && m.team2_id).map((m) => ({
     id: m.id, team1Id: m.team1_id!, team2Id: m.team2_id!, queuePosition: m.queue_position ?? 999999,
   }));
-  const ahead = live ? 0 : matchesAheadForTeam(allQueued, teamId);
+  const ahead = live ? 0 : (matchesAheadForTeam(allQueued, teamId) ?? 0);
   const past = ownMatches.filter((m) => ['finished','forfeit'].includes(m.status)).sort((a,b) => (Date.parse(b.ended_at ?? '') || 0) - (Date.parse(a.ended_at ?? '') || 0) || matchOrder(b,a));
   const future = ownMatches.filter((m) => !['finished','forfeit','cancelled'].includes(m.status)).sort(matchOrder);
   const ownTimeline = [...past, ...future];
@@ -288,9 +288,9 @@ function PlayerHome({ bundle, teamId }: { bundle: TournamentBundle; teamId: stri
     nextCard = <section className={liveNow ? 'next-card urgent' : 'next-card'} onClick={() => liveNow && navigate(`/tournament/${bundle.tournament.slug}/match/${next.id}`)} role={liveNow ? 'button' : undefined}>
       <div className="eyebrow">{liveNow ? 'È IL VOSTRO TURNO' : 'PROSSIMA PARTITA'}</div>
       <div className="versus"><strong>{team.name}</strong><span>VS</span><strong>{opponent}</strong></div>
-      <div className={liveNow ? 'ahead-hero live-turn' : 'ahead-hero'}><strong>{liveNow ? 'TOCCA A VOI' : ahead === 0 ? 'PROSSIMI' : ahead}</strong><span>{liveNow ? (field ? `VAI AL ${field.toUpperCase()}` : 'CAMPO DA ASSEGNARE') : ahead === 0 ? 'SIETE I PROSSIMI' : `${ahead === 1 ? 'PARTITA' : 'PARTITE'} PRIMA DI VOI`}</span>{!liveNow && <small>Considera che ci sono {activeFieldCount} {activeFieldCount === 1 ? 'campo' : 'campi'}</small>}</div>
+      <div className={liveNow ? 'ahead-hero live-turn' : 'ahead-hero'}>{!liveNow && ahead > 0 && <small className="ahead-queue-label">CODA</small>}<strong>{liveNow ? 'TOCCA A VOI' : ahead === 0 ? 'PROSSIMI' : ahead}</strong><span>{liveNow ? (field ? `VAI AL ${field.toUpperCase()}` : 'CAMPO DA ASSEGNARE') : ahead === 0 ? 'SIETE I PROSSIMI' : `${ahead === 1 ? 'PARTITA' : 'PARTITE'} PRIMA DI VOI`}</span>{!liveNow && <small className="ahead-fields-note">Considera che ci sono {activeFieldCount} {activeFieldCount === 1 ? 'campo' : 'campi'}</small>}</div>
       {!liveNow && <div className="next-field">{field ?? 'Campo da assegnare'}</div>}
-      {liveNow && <div className="tap-hint">Tocca per giocare →</div>}
+      {liveNow && <div className="tap-hint">INIZIA PARTITA →</div>}
     </section>;
   }
 
