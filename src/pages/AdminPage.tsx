@@ -23,6 +23,7 @@ import {
   adminPostponeMatch,
   adminStartTournament,
   adminResetTournamentMatches,
+  adminSetMatchResult,
   adminUpdateMatchResult,
   createTournament,
   isCurrentUserAdmin,
@@ -712,6 +713,7 @@ function MatchesAdmin({ bundle, refresh, setError, finishedOnly = false }: Admin
   const [showFinished,setShowFinished]=useState(true);
   const [showFuture,setShowFuture]=useState(!finishedOnly);
   const [view,setView]=useState<'chronology'|'groups'>('chronology');
+  const [chronologyDirection,setChronologyDirection]=useState<'asc'|'desc'>('asc');
   const [statusFilter,setStatusFilter]=useState<'all'|MatchRow['status']>('all');
   const [fieldFilter,setFieldFilter]=useState('all');
 
@@ -731,6 +733,8 @@ function MatchesAdmin({ bundle, refresh, setError, finishedOnly = false }: Admin
       return true;
     }),[bundle,query,showFinished,showFuture,statusFilter,fieldFilter]);
 
+  const chronologyMatches=chronologyDirection==='asc' ? filtered : [...filtered].reverse();
+
   const groupSections = bundle.groups.map((group)=>({
     id:group.id,
     title:group.name,
@@ -738,7 +742,7 @@ function MatchesAdmin({ bundle, refresh, setError, finishedOnly = false }: Admin
   })).filter((section)=>section.matches.length>0);
   const knockout = filtered.filter((m)=>m.stage!=='group');
   if(knockout.length) groupSections.push({id:'knockout',title:'Eliminazione diretta',matches:knockout});
-  const sections = view==='chronology' ? [{id:'all',title:'Cronologia totale',matches:filtered}] : groupSections;
+  const sections = view==='chronology' ? [{id:'all',title:'Cronologia totale',matches:chronologyMatches}] : groupSections;
 
   const statuses: MatchRow['status'][] = ['scheduled','queued','called','ready','playing','awaiting_result','finished','postponed','cancelled','forfeit'];
 
@@ -757,6 +761,12 @@ function MatchesAdmin({ bundle, refresh, setError, finishedOnly = false }: Admin
         </div>
         <div className="admin-view-toggle">
           <button className={view==='chronology'?'active':''} onClick={()=>setView('chronology')}>Cronologia totale</button>
+          {view==='chronology' && <button
+            className="admin-chronology-direction"
+            title={chronologyDirection==='asc' ? 'Prima le partite più vecchie' : 'Prima le partite più recenti'}
+            aria-label={chronologyDirection==='asc' ? 'Ordine cronologico crescente' : 'Ordine cronologico decrescente'}
+            onClick={()=>setChronologyDirection((current)=>current==='asc'?'desc':'asc')}
+          >{chronologyDirection==='asc' ? '↑' : '↓'}</button>}
           <button className={view==='groups'?'active':''} onClick={()=>setView('groups')}>Per gironi</button>
         </div>
       </div>
@@ -786,7 +796,7 @@ function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchR
   async function save() {
     const a=Number(s1), b=Number(s2);
     if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0){setError('Punteggio non valido.');return;}
-    await run(()=>closed?adminUpdateMatchResult(m.id,a,b):submitMatchResult(m.id,a,b));
+    await run(()=>adminSetMatchResult(m.id,a,b));
   }
 
   return <div className="admin-match-row admin-match-row-v2">
@@ -796,7 +806,7 @@ function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchR
     </div>
 
     <div className="admin-match-actions-v2">
-      <div className="score-mini"><input type="number" min="0" value={s1} disabled={m.status==='cancelled'} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} disabled={m.status==='cancelled'} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || (!closed && !['playing','awaiting_result'].includes(m.status))} onClick={()=>void save()}>{closed?'Correggi':'Salva'}</button></div>
+      <div className="score-mini"><input type="number" min="0" value={s1} disabled={busy} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} disabled={busy} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || !m.team1_id || !m.team2_id || s1.trim()==='' || s2.trim()===''} onClick={()=>void save()}>{closed?'Correggi':'Salva'}</button></div>
       {!fullyClosed && <div className="admin-match-inline-actions">
         {['queued','called','ready','playing','awaiting_result'].includes(m.status) && <select defaultValue="" disabled={busy || freeFields.length===0} onChange={(e)=>{const id=e.currentTarget.value;e.currentTarget.value='';if(id)void run(()=>adminAssignMatchField(m.id,id));}}><option value="">Assegna campo…</option>{freeFields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select>}
         {!['scheduled'].includes(m.status) && <button disabled={busy} onClick={()=>void run(()=>adminPostponeMatch(m.id))}>Rimanda</button>}

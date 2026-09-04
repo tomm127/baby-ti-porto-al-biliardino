@@ -3147,3 +3147,62 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB PLAYER GAME SIGNALS V2 END */
+
+/* BTPB ADMIN RESULTS + SCORE ENTRY V1 START */
+
+/* Compact chronology direction button beside "Cronologia totale". */
+.admin-v2 .admin-view-toggle .admin-chronology-direction {
+  min-width: 42px;
+  padding-left: 11px;
+  padding-right: 11px;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+/* Make result entry after the match much more obvious on player phones. */
+.match-screen .score-entry > .eyebrow {
+  margin: 4px 0 24px;
+  text-align: center;
+  font-size: clamp(28px, 8vw, 38px) !important;
+  line-height: .92;
+  letter-spacing: .06em !important;
+  font-weight: 1000 !important;
+}
+
+.match-screen .score-entry p {
+  font-size: clamp(15px, 4.2vw, 19px);
+  line-height: 1.35;
+}
+
+.match-screen .score-inputs {
+  gap: 12px;
+}
+
+.match-screen .score-inputs label > span {
+  display: block;
+  min-height: 2.4em;
+  font-size: clamp(17px, 4.8vw, 22px);
+  line-height: 1.08;
+  font-weight: 950;
+}
+
+.match-screen .score-inputs input {
+  min-height: 82px;
+  font-size: clamp(46px, 14vw, 68px) !important;
+  font-weight: 950;
+  text-align: center;
+}
+
+.match-screen .score-inputs > strong {
+  font-size: clamp(32px, 9vw, 46px);
+}
+
+.match-screen .score-entry > .giant-button {
+  min-height: 64px;
+  margin-top: 18px;
+  font-size: clamp(18px, 5vw, 23px);
+  font-weight: 950;
+}
+
+/* BTPB ADMIN RESULTS + SCORE ENTRY V1 END */

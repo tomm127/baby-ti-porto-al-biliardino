@@ -586,6 +586,17 @@ export async function adminResetTournamentMatches(tournamentId: string) {
   return regenerateGroupSchedule(tournamentId);
 }
 
+export async function adminSetMatchResult(matchId: string, scoreTeam1: number, scoreTeam2: number) {
+  const { data, error } = await client().rpc('admin_set_match_result', {
+    p_match_id: matchId,
+    p_score_team1: scoreTeam1,
+    p_score_team2: scoreTeam2,
+  });
+  if (error) throw error;
+  await dispatchPushNonFatal();
+  return data as MatchRow;
+}
+
 export async function adminUpdateMatchResult(matchId: string, scoreTeam1: number, scoreTeam2: number) {
   const { data, error } = await client().rpc('admin_update_match_result', {
     p_match_id: matchId,

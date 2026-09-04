@@ -52,6 +52,36 @@ function scheduleTone(
   oscillator.stop(startAt + duration + 0.02);
 }
 
+function scheduleSweep(
+  ctx: AudioContext,
+  fromFrequency: number,
+  toFrequency: number,
+  startAt: number,
+  duration: number,
+  volume: number,
+  type: OscillatorType = 'triangle',
+) {
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(fromFrequency, startAt);
+  oscillator.frequency.exponentialRampToValueAtTime(
+    Math.max(1, toFrequency),
+    startAt + duration,
+  );
+
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), startAt + 0.025);
+  gain.gain.setValueAtTime(Math.max(0.0002, volume), startAt + Math.max(0.03, duration - 0.12));
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+  oscillator.start(startAt);
+  oscillator.stop(startAt + duration + 0.03);
+}
+
 async function runningGameAudioContext() {
   const ctx = getGameAudioContext();
   if (!ctx) return null;
@@ -103,12 +133,17 @@ export async function playBtpbCountdownBeep(step: number) {
   if (!ctx) return false;
 
   const now = ctx.currentTime + 0.01;
-  const frequency = step === 3 ? 620 : step === 2 ? 720 : 1020;
-  const duration = step === 1 ? 0.34 : 0.16;
-  const volume = step === 1 ? 0.34 : 0.25;
 
-  scheduleTone(ctx, frequency, now, duration, volume, 'triangle');
-  scheduleTone(ctx, frequency * 2, now, duration, volume * 0.22, 'sine');
+  if (step === 3 || step === 2) {
+    // Two clear "ready" horns.
+    const base = step === 3 ? 430 : 500;
+    scheduleTone(ctx, base, now, 0.30, 0.30, 'triangle');
+    scheduleTone(ctx, base * 2, now, 0.30, 0.075, 'sine');
+  } else {
+    // Longer rising START signal.
+    scheduleSweep(ctx, 620, 980, now, 0.72, 0.38, 'triangle');
+    scheduleSweep(ctx, 1240, 1760, now, 0.72, 0.09, 'sine');
+  }
 
   return true;
 }
@@ -122,17 +157,13 @@ export async function playBtpbTimerEndAlarm() {
   if (!ctx) return false;
 
   const base = ctx.currentTime + 0.015;
-  const bursts = [
-    { at: 0.00, frequency: 760, duration: 0.24, volume: 0.34 },
-    { at: 0.31, frequency: 760, duration: 0.24, volume: 0.34 },
-    { at: 0.62, frequency: 980, duration: 0.40, volume: 0.38 },
-    { at: 1.12, frequency: 820, duration: 0.58, volume: 0.36 },
-  ];
 
-  for (const burst of bursts) {
-    scheduleTone(ctx, burst.frequency, base + burst.at, burst.duration, burst.volume, 'triangle');
-    scheduleTone(ctx, burst.frequency * 2, base + burst.at, burst.duration, burst.volume * 0.20, 'sine');
-  }
+  // Two long descending whistles: clearly different from the 3-2-1 start.
+  scheduleSweep(ctx, 1120, 620, base, 0.92, 0.40, 'sawtooth');
+  scheduleSweep(ctx, 2240, 1240, base, 0.92, 0.055, 'sine');
+
+  scheduleSweep(ctx, 980, 430, base + 1.08, 1.18, 0.42, 'sawtooth');
+  scheduleSweep(ctx, 1960, 860, base + 1.08, 1.18, 0.06, 'sine');
 
   return true;
 }
