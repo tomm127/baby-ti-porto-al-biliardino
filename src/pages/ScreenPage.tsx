@@ -75,7 +75,7 @@ export function ScreenPage({ slug }: { slug: string }) {
   const activeFields = bundle.fields.filter((field) => field.is_active).sort((a,b) => a.sort_order - b.sort_order);
   const live = bundle.matches.filter((m) => ['called','ready','playing','awaiting_result'].includes(m.status));
   const byField = new Map(live.filter((m) => m.field_id).map((m) => [m.field_id!, m]));
-  const queue = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder).slice(0, 8);
+  const queue = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder).slice(0, 10);
   const prepare = queue[0];
   const restQueue = queue.slice(1);
   const nextListStyle = { '--tv-next-count': String(Math.max(restQueue.length, 1)) } as CSSProperties;
