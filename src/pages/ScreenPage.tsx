@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { calculateStandings, type PlayedMatch, type Team as EngineTeam } from '../domain/index.ts';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { loadTournamentBundleResilient, type MatchRow, type TournamentBundle } from '../lib/api.ts';
 import { countdownRemaining, formatClock, secondsRemaining } from '../lib/time.ts';
 import { useConnectivity } from '../lib/useConnectivity.ts';
@@ -8,14 +7,12 @@ import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 import '../tv.css';
 
-const GROUP_ROTATION_MS = 8000;
 
 export function ScreenPage({ slug }: { slug: string }) {
   const [bundle, setBundle] = useState<TournamentBundle | null>(null);
   const [error, setError] = useState('');
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [, setTick] = useState(Date.now());
-  const [groupPage, setGroupPage] = useState(0);
   const [flashingFields, setFlashingFields] = useState<Set<string>>(new Set());
   const [prepareFlash, setPrepareFlash] = useState(false);
   const previousFieldMatches = useRef<Map<string, string>>(new Map());
@@ -44,17 +41,6 @@ export function ScreenPage({ slug }: { slug: string }) {
     const id = window.setInterval(() => setTick(Date.now()), 250);
     return () => window.clearInterval(id);
   }, []);
-
-  const standings = useMemo(() => bundle ? buildStandings(bundle) : [], [bundle]);
-  // Ogni 8 secondi avanziamo di UN girone.
-  // Anche con due gironi: A/B -> B/A, così la rotazione è visibile.
-  const groupPageCount = Math.max(1, standings.length);
-
-  useEffect(() => {
-    if (groupPageCount <= 1) { setGroupPage(0); return; }
-    const id = window.setInterval(() => setGroupPage((page) => (page + 1) % groupPageCount), GROUP_ROTATION_MS);
-    return () => window.clearInterval(id);
-  }, [groupPageCount]);
 
   useEffect(() => {
     if (!bundle) return;
@@ -89,12 +75,10 @@ export function ScreenPage({ slug }: { slug: string }) {
   const activeFields = bundle.fields.filter((field) => field.is_active).sort((a,b) => a.sort_order - b.sort_order);
   const live = bundle.matches.filter((m) => ['called','ready','playing','awaiting_result'].includes(m.status));
   const byField = new Map(live.filter((m) => m.field_id).map((m) => [m.field_id!, m]));
-  const queue = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder).slice(0, 10);
+  const queue = bundle.matches.filter((m) => m.status === 'queued').sort(queueOrder).slice(0, 8);
   const prepare = queue[0];
   const restQueue = queue.slice(1);
   const nextListStyle = { '--tv-next-count': String(Math.max(restQueue.length, 1)) } as CSSProperties;
-  const leftGroup = standings.length ? standings[groupPage % standings.length] : undefined;
-  const rightGroup = standings.length > 1 ? standings[(groupPage + 1) % standings.length] : undefined;
   const playerUrl = `${window.location.origin}/tournament/${bundle.tournament.slug}`;
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(playerUrl)}&size=180&margin=1&ecLevel=M`;
   const fieldColumns = activeFields.length <= 4 ? Math.max(activeFields.length, 1) : Math.ceil(activeFields.length / 2);
@@ -133,10 +117,8 @@ export function ScreenPage({ slug }: { slug: string }) {
       {activeFields.map((field) => <ScreenField key={field.id} name={field.name} match={byField.get(field.id)} bundle={bundle} flash={flashingFields.has(field.id)} />)}
     </section>
 
-    {bundle.tournament.phase === 'groups' ? <section className="tv-middle tv-middle-groups">
-      <StandingPanel group={leftGroup} page={groupPage} pageCount={groupPageCount} side="left" />
+    {bundle.tournament.phase === 'groups' ? <section className="tv-middle tv-middle-queue-only">
       {queuePanel}
-      <StandingPanel group={rightGroup} page={groupPage} pageCount={groupPageCount} side="right" />
     </section> : <section className="tv-middle tv-middle-knockout">
       {queuePanel}
       <div className="tv-bracket-panel">
@@ -151,22 +133,6 @@ export function ScreenPage({ slug }: { slug: string }) {
       <div className="tv-qr"><img src={qrUrl} alt={`QR code per ${playerUrl}`} /></div>
     </footer>
   </main>;
-}
-
-function StandingPanel({ group, page, pageCount, side }: { group: ReturnType<typeof buildStandings>[number] | undefined; page: number; pageCount: number; side: 'left' | 'right' }) {
-  return <div className={`tv-standing-side tv-standing-${side}`}>
-    <div className="tv-section-title"><span>CLASSIFICA</span><strong>{pageCount > 1 ? 'CAMBIO OGNI 8 S' : 'LIVE'}</strong></div>
-    {group ? <>
-      <h2>{group.name}</h2>
-      <div className="tv-standing-head"><span>#</span><span>Squadra</span><span>PT</span><span>DR</span></div>
-      <div className="tv-standing-body">
-        {group.rows.map((row, index) => <div className="tv-standing-row" key={row.teamId}>
-          <span>{index + 1}</span><strong>{row.teamName}</strong><span>{row.points}</span><span>{row.goalDifference > 0 ? '+' : ''}{row.goalDifference}</span>
-        </div>)}
-      </div>
-      {pageCount > 1 && <div className="tv-page-dots">{Array.from({ length: pageCount }, (_, i) => <span className={i === page ? 'active' : ''} key={i} />)}</div>}
-    </> : <div className="tv-empty-standing">In attesa del girone</div>}
-  </div>;
 }
 
 function ScreenField({ name, match, bundle, flash }: { name: string; match?: MatchRow; bundle: TournamentBundle; flash: boolean }) {
@@ -188,17 +154,6 @@ function ScreenField({ name, match, bundle, flash }: { name: string; match?: Mat
     <div className="tv-field-clock">{clock}</div>
     {flash && <div className="tv-new-match-label">NUOVA PARTITA</div>}
   </article>;
-}
-
-function buildStandings(bundle: TournamentBundle) {
-  return bundle.groups.map((group) => {
-    const members = bundle.groupTeams.filter((gt) => gt.group_id === group.id);
-    const teams: EngineTeam[] = members.map((gt) => ({ id: gt.team_id, name: teamName(bundle, gt.team_id), lotOrder: gt.lot_order }));
-    const played: PlayedMatch[] = bundle.matches.filter((m) => m.group_id === group.id && ['finished','forfeit'].includes(m.status) && m.team1_id && m.team2_id && m.score_team1 != null && m.score_team2 != null).map((m) => ({
-      id: m.id, groupId: group.id, team1Id: m.team1_id!, team2Id: m.team2_id!, scoreTeam1: m.score_team1!, scoreTeam2: m.score_team2!,
-    }));
-    return { id: group.id, name: group.name, rows: calculateStandings(teams, played) };
-  });
 }
 
 function stageLabel(bundle: TournamentBundle, match: MatchRow) {

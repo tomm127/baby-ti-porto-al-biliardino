@@ -633,3 +633,101 @@
   line-height: 1 !important;
   text-transform: lowercase !important;
 }
+
+/* BTPB TV NO STANDINGS + CENTERED QUEUE V1 START */
+
+/* Group phase:
+   live fields on top, lots of visual breathing room,
+   next 8 matches centered below at roughly one-third width. */
+.tv-v2 .tv-middle-queue-only {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(340px, 33.333%);
+  justify-content: center;
+  align-content: start;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-queue-panel {
+  width: 100%;
+  min-width: 0;
+  max-height: 100%;
+}
+
+/* Compact the queue slightly so 8 matches fit comfortably
+   without turning it into a dominant full-width block. */
+.tv-v2 .tv-middle-queue-only .tv-section-title {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-section-title > span {
+  font-size: clamp(16px, 1vw, 21px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-section-title > strong {
+  font-size: clamp(11px, .72vw, 14px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare {
+  padding: clamp(10px, .72vw, 14px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-label {
+  font-size: clamp(14px, .9vw, 18px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-stage {
+  font-size: clamp(11px, .72vw, 14px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-match {
+  margin-top: 7px;
+  gap: 8px;
+  font-size: clamp(20px, 1.4vw, 28px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-match span {
+  font-size: 11px;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row {
+  grid-template-columns: 26px minmax(0,1fr);
+  gap: 7px;
+  padding: clamp(4px, .28vh, 6px) 0;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row > span {
+  font-size: clamp(13px, .8vw, 16px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row > div {
+  grid-template-columns: minmax(68px,.26fr) minmax(0,1fr);
+  gap: 7px;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row small {
+  font-size: clamp(11px, .72vw, 14px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row strong {
+  font-size: clamp(14px, .9vw, 18px);
+}
+
+/* Give the field area a little more presence now that standings are gone. */
+.tv-v2 .tv-fields {
+  align-self: start;
+}
+
+@media (max-width: 1200px) {
+  .tv-v2 .tv-middle-queue-only {
+    grid-template-columns: minmax(330px, 42%);
+  }
+}
+
+@media (max-width: 850px) {
+  .tv-v2 .tv-middle-queue-only {
+    grid-template-columns: minmax(300px, 56%);
+  }
+}
+
+/* BTPB TV NO STANDINGS + CENTERED QUEUE V1 END */
