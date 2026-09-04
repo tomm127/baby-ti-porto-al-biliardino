@@ -731,3 +731,124 @@
 }
 
 /* BTPB TV NO STANDINGS + CENTERED QUEUE V1 END */
+
+/* BTPB TV QUEUE BIGGER TEXT V2 START */
+
+/* Keep the queue at about one third of the TV width,
+   but use the available vertical space instead of collapsing around content. */
+.tv-v2 .tv-middle-queue-only {
+  grid-template-columns: minmax(400px, 34%);
+  align-content: stretch;
+  align-items: stretch;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-queue-panel {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  padding: clamp(17px, 1.15vw, 23px);
+}
+
+/* Header */
+.tv-v2 .tv-middle-queue-only .tv-section-title {
+  margin-bottom: clamp(12px, .9vh, 17px);
+  padding-bottom: clamp(11px, .8vh, 15px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-section-title > span {
+  font-size: clamp(20px, 1.35vw, 27px);
+  letter-spacing: .11em;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-section-title > strong {
+  font-size: clamp(15px, .95vw, 19px);
+}
+
+/* PREPARATEVI becomes the clear focal point */
+.tv-v2 .tv-middle-queue-only .tv-prepare {
+  padding: clamp(16px, 1.05vw, 22px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-label {
+  font-size: clamp(21px, 1.35vw, 27px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-stage {
+  margin-top: 5px;
+  font-size: clamp(16px, 1.02vw, 20px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-match {
+  margin-top: clamp(12px, .9vh, 16px);
+  gap: clamp(10px, .7vw, 16px);
+  font-size: clamp(27px, 1.75vw, 36px);
+  line-height: 1;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-prepare-match span {
+  font-size: clamp(13px, .8vw, 16px);
+}
+
+/* Use all remaining height for the following matches. */
+.tv-v2 .tv-middle-queue-only .tv-next-list {
+  height: 100%;
+  min-height: 0;
+  margin-top: clamp(9px, .7vh, 13px);
+  align-content: stretch;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row {
+  grid-template-columns: clamp(28px, 1.9vw, 38px) minmax(0, 1fr);
+  gap: clamp(9px, .65vw, 13px);
+  min-height: 0;
+  padding: clamp(7px, .55vh, 11px) 0;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row > span {
+  font-size: clamp(18px, 1.15vw, 23px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row > div {
+  grid-template-columns: minmax(92px, .28fr) minmax(0, 1fr);
+  gap: clamp(10px, .7vw, 15px);
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row small {
+  font-size: clamp(16px, 1.02vw, 20px);
+  line-height: 1.05;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row strong {
+  font-size: clamp(21px, 1.35vw, 28px);
+  line-height: 1.04;
+}
+
+.tv-v2 .tv-middle-queue-only .tv-next-row em {
+  font-size: .72em;
+}
+
+/* Empty queue should also use the panel space. */
+.tv-v2 .tv-middle-queue-only .tv-empty-queue {
+  min-height: 180px;
+  font-size: clamp(24px, 1.55vw, 32px);
+}
+
+@media (max-width: 1200px) {
+  .tv-v2 .tv-middle-queue-only {
+    grid-template-columns: minmax(390px, 42%);
+  }
+}
+
+@media (max-width: 900px) {
+  .tv-v2 .tv-middle-queue-only {
+    grid-template-columns: minmax(360px, 54%);
+  }
+
+  .tv-v2 .tv-middle-queue-only .tv-next-row strong {
+    font-size: clamp(19px, 1.5vw, 24px);
+  }
+}
+
+/* BTPB TV QUEUE BIGGER TEXT V2 END */
