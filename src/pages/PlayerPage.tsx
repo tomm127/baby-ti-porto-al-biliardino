@@ -21,7 +21,7 @@ import { navigate } from '../router.ts';
 import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { useConnectivity } from '../lib/useConnectivity.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
-import { playBtpbAlertSound, primeBtpbAlertSound } from '../lib/alertSound.ts';
+import { playBtpbCountdownBeep, playBtpbTimerEndAlarm, primeBtpbAlertSound, unlockBtpbGameAudio } from '../lib/alertSound.ts';
 
 interface Props { slug: string; matchId?: string; }
 
@@ -422,6 +422,8 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   const endFeedbackPlayed = useRef<string | null>(null);
   const endAlertTimeout = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const countdownBeepKey = useRef<string | null>(null);
+  const previousTimerState = useRef<{ id: string; status: MatchRow['status']; remaining: number | null } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -449,31 +451,7 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   }
 
   function playMatchEndSound() {
-    try {
-      unlockMatchAudio();
-      const ctx = audioContextRef.current;
-      if (!ctx || ctx.state !== 'running') return;
-
-      const now = ctx.currentTime;
-      [0, 0.28, 0.56].forEach((delay, index) => {
-        const oscillator = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const start = now + delay;
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(index === 2 ? 1100 : 880, start);
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(0.18, start + 0.025);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.19);
-
-        oscillator.connect(gain);
-        gain.connect(ctx.destination);
-        oscillator.start(start);
-        oscillator.stop(start + 0.2);
-      });
-    } catch {
-      // Some browsers can block programmatic audio.
-    }
+    void playBtpbTimerEndAlarm();
   }
 
   function showSystemEndNotification() {
@@ -491,8 +469,6 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   }
 
   function fireMatchEndFeedback() {
-    // Real HTML media sound: behaves like audio/video while the app is active.
-    void playBtpbAlertSound();
     setTimerEndAlert(true);
     playMatchEndSound();
 
@@ -505,11 +481,12 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
     if (!('vibrate' in navigator)) showSystemEndNotification();
 
     if (endAlertTimeout.current) window.clearTimeout(endAlertTimeout.current);
-    endAlertTimeout.current = window.setTimeout(() => setTimerEndAlert(false), 4200);
+    endAlertTimeout.current = window.setTimeout(() => setTimerEndAlert(false), 6000);
   }
 
   async function startPlayerMatch(currentMatchId: string) {
-    // Explicit user gesture: unlock the media element before the timer starts.
+    // Real user gesture: unlock both Web Audio and the HTML media fallback.
+    void unlockBtpbGameAudio();
     void primeBtpbAlertSound();
     unlockMatchAudio();
     return startMatch(currentMatchId);
@@ -533,28 +510,67 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   const countdown = match ? countdownRemaining(match.started_at) : 0;
 
   useEffect(() => {
+    if (!match || match.status !== 'playing' || countdown < 1 || countdown > 3) return;
+
+    const key = `${match.id}:${countdown}`;
+    if (countdownBeepKey.current === key) return;
+
+    countdownBeepKey.current = key;
+    void playBtpbCountdownBeep(countdown);
+  }, [match?.id, match?.status, countdown]);
+
+
+  useEffect(() => {
     void tick;
 
-    const timerReallyEnded =
-      Boolean(match) &&
-      match?.status === 'playing' &&
-      match.duration_seconds != null &&
-      remaining === 0 &&
-      countdown === 0;
+    if (!match) {
+      previousTimerState.current = null;
+      return;
+    }
 
-    if (timerReallyEnded && match && endFeedbackPlayed.current !== match.id) {
+    const previous = previousTimerState.current;
+
+    const timerEndedLocally =
+      match.status === 'playing' &&
+      match.duration_seconds != null &&
+      countdown === 0 &&
+      remaining != null &&
+      remaining <= 0;
+
+    const timerEndedOnServer =
+      match.status === 'awaiting_result' &&
+      match.duration_seconds != null &&
+      match.timer_remaining_seconds === 0 &&
+      previous?.id === match.id &&
+      previous.status === 'playing';
+
+    if (
+      (timerEndedLocally || timerEndedOnServer) &&
+      endFeedbackPlayed.current !== match.id
+    ) {
       endFeedbackPlayed.current = match.id;
       fireMatchEndFeedback();
     }
 
-    if (!online || !match || bundle?.settings.emergency_paused || !timerReallyEnded || expiring.current) return;
+    previousTimerState.current = {
+      id: match.id,
+      status: match.status,
+      remaining,
+    };
+
+    if (
+      !online ||
+      bundle?.settings.emergency_paused ||
+      !timerEndedLocally ||
+      expiring.current
+    ) return;
 
     expiring.current = true;
     markTimerExpired(match.id)
       .then(refresh)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => { expiring.current = false; });
-  }, [tick, online, match, remaining, countdown, refresh]);
+  }, [tick, online, match, remaining, countdown, refresh, bundle?.settings.emergency_paused]);
 
   if (error && !bundle) return <CenteredMessage title="Errore partita" body={error} back />;
   if (!bundle || !match) return <CenteredMessage title="Caricamento partita…" />;

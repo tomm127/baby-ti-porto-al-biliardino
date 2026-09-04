@@ -2,11 +2,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
 import './styles.css';
-import { installBtpbAlertSoundUnlock, playBtpbAlertSound } from './lib/alertSound.ts';
+import { installBtpbAlertSoundUnlock, installBtpbGameAudioUnlock, playBtpbAlertSound } from './lib/alertSound.ts';
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
 
 installBtpbAlertSoundUnlock();
+installBtpbGameAudioUnlock();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
