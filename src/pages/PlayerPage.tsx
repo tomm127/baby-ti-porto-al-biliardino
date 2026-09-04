@@ -507,14 +507,6 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
 
   async function startPlayerMatch(currentMatchId: string) {
     unlockMatchAudio();
-
-    try {
-      const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> };
-      if (orientation.lock) await orientation.lock('landscape');
-    } catch {
-      // iOS may ignore programmatic orientation lock; CSS will ask the player to rotate.
-    }
-
     return startMatch(currentMatchId);
   }
   useEffect(() => { void refresh(); }, [refresh]);
@@ -586,10 +578,6 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
     {timerEndAlert && <div className="match-end-flash" role="alert" aria-live="assertive">
       <strong>TEMPO FINITO</strong>
       <span>PARTITA TERMINATA</span>
-    </div>}
-    {match.status === 'playing' && <div className="match-rotate-hint" aria-hidden="true">
-      <span>↻</span>
-      <strong>RUOTA IL TELEFONO</strong>
     </div>}
     <ConnectionBanner online={online} cachedAt={cachedAt} />
     <header className="match-top"><button className="icon-button light" onClick={() => navigate(`/tournament/${slug}`)}>←</button><div><span>{bundle.tournament.name}</span><strong>{field}</strong></div></header>
