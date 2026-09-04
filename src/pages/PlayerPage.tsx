@@ -58,6 +58,7 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
   }, [slug]);
 
   const online = useConnectivity(() => void refresh());
+
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
     if (!online) return;
@@ -415,7 +416,11 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   const [score2, setScore2] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [timerEndAlert, setTimerEndAlert] = useState(false);
   const expiring = useRef(false);
+  const endFeedbackPlayed = useRef<string | null>(null);
+  const endAlertTimeout = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -429,7 +434,100 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   }, [slug]);
 
   const online = useConnectivity(() => void refresh());
+
+
+  function unlockMatchAudio() {
+    try {
+      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextCtor) return;
+      if (!audioContextRef.current) audioContextRef.current = new AudioContextCtor();
+      if (audioContextRef.current.state === 'suspended') void audioContextRef.current.resume();
+    } catch {
+      // Audio is best-effort; visual feedback always remains available.
+    }
+  }
+
+  function playMatchEndSound() {
+    try {
+      unlockMatchAudio();
+      const ctx = audioContextRef.current;
+      if (!ctx || ctx.state !== 'running') return;
+
+      const now = ctx.currentTime;
+      [0, 0.28, 0.56].forEach((delay, index) => {
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const start = now + delay;
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(index === 2 ? 1100 : 880, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.18, start + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.19);
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.2);
+      });
+    } catch {
+      // Some browsers can block programmatic audio.
+    }
+  }
+
+  function showSystemEndNotification() {
+    if (!('Notification' in window) || Notification.permission !== 'granted' || !('serviceWorker' in navigator)) return;
+
+    void navigator.serviceWorker.ready.then((registration) => registration.showNotification('TEMPO FINITO', {
+      body: 'Partita terminata. Inserite il risultato.',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/badge-96.png',
+      tag: `btpb-timer-end-${matchId}`,
+      renotify: true,
+      silent: false,
+      data: { url: `/tournament/${slug}/match/${matchId}` },
+    } as NotificationOptions)).catch(() => undefined);
+  }
+
+  function fireMatchEndFeedback() {
+    setTimerEndAlert(true);
+    playMatchEndSound();
+
+    try {
+      if ('vibrate' in navigator) navigator.vibrate([350, 120, 350, 120, 650]);
+    } catch {
+      // Vibration API is not available on every phone/browser.
+    }
+
+    if (!('vibrate' in navigator)) showSystemEndNotification();
+
+    if (endAlertTimeout.current) window.clearTimeout(endAlertTimeout.current);
+    endAlertTimeout.current = window.setTimeout(() => setTimerEndAlert(false), 4200);
+  }
+
+  async function startPlayerMatch(currentMatchId: string) {
+    unlockMatchAudio();
+
+    try {
+      const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: string) => Promise<void> };
+      if (orientation.lock) await orientation.lock('landscape');
+    } catch {
+      // iOS may ignore programmatic orientation lock; CSS will ask the player to rotate.
+    }
+
+    return startMatch(currentMatchId);
+  }
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    const unlock = () => unlockMatchAudio();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('touchend', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('touchend', unlock);
+      if (endAlertTimeout.current) window.clearTimeout(endAlertTimeout.current);
+    };
+  }, []);
   useEffect(() => { const id = window.setInterval(() => setTick(Date.now()), 250); return () => window.clearInterval(id); }, []);
   useEffect(() => { if (!online) return; const id = window.setInterval(() => void refresh(), 3000); return () => window.clearInterval(id); }, [refresh, online]);
 
@@ -439,9 +537,26 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
 
   useEffect(() => {
     void tick;
-    if (!online || !match || bundle?.settings.emergency_paused || match.status !== 'playing' || match.duration_seconds == null || remaining !== 0 || countdown > 0 || expiring.current) return;
+
+    const timerReallyEnded =
+      Boolean(match) &&
+      match?.status === 'playing' &&
+      match.duration_seconds != null &&
+      remaining === 0 &&
+      countdown === 0;
+
+    if (timerReallyEnded && match && endFeedbackPlayed.current !== match.id) {
+      endFeedbackPlayed.current = match.id;
+      fireMatchEndFeedback();
+    }
+
+    if (!online || !match || bundle?.settings.emergency_paused || !timerReallyEnded || expiring.current) return;
+
     expiring.current = true;
-    markTimerExpired(match.id).then(refresh).catch((e) => setError(e instanceof Error ? e.message : String(e))).finally(() => { expiring.current = false; });
+    markTimerExpired(match.id)
+      .then(refresh)
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => { expiring.current = false; });
   }, [tick, online, match, remaining, countdown, refresh]);
 
   if (error && !bundle) return <CenteredMessage title="Errore partita" body={error} back />;
@@ -466,15 +581,23 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
     setConfirming(false);
   }
 
-  return <main className="match-screen">
+  return <main className={timerEndAlert ? 'match-screen match-end-alerting' : 'match-screen'}>
     {bundle.settings.emergency_paused && <TournamentPausedOverlay dark />}
+    {timerEndAlert && <div className="match-end-flash" role="alert" aria-live="assertive">
+      <strong>TEMPO FINITO</strong>
+      <span>PARTITA TERMINATA</span>
+    </div>}
+    {match.status === 'playing' && <div className="match-rotate-hint" aria-hidden="true">
+      <span>↻</span>
+      <strong>RUOTA IL TELEFONO</strong>
+    </div>}
     <ConnectionBanner online={online} cachedAt={cachedAt} />
     <header className="match-top"><button className="icon-button light" onClick={() => navigate(`/tournament/${slug}`)}>←</button><div><span>{bundle.tournament.name}</span><strong>{field}</strong></div></header>
     <section className="match-stage">
       <div className="match-team-names"><strong>{a}</strong><span>VS</span><strong>{b}</strong></div>
       {match.status === 'playing' && countdown > 0 && <div className="countdown"><span>{countdown}</span><small>PREPARATEVI</small></div>}
       {match.status === 'playing' && countdown === 0 && <><div className="match-clock">{match.duration_seconds == null ? 'IN CORSO' : formatClock(remaining)}</div>{match.goal_target && <div className="target-label">Primo a {match.goal_target} · oppure fine tempo</div>}{!online && remaining === 0 && <div className="offline-match-note">Tempo terminato. Continuate a giocare: appena torna la connessione passeremo automaticamente all'inserimento del risultato.</div>}</>}
-      {['called','ready'].includes(match.status) && <><div className="waiting-title">Siete sul campo.</div><button className="giant-button" disabled={busy || !online} onClick={() => void action(() => startMatch(match.id))}>AVVIA PARTITA</button></>}
+      {['called','ready'].includes(match.status) && <><div className="waiting-title">Siete sul campo.</div><button className="giant-button" disabled={busy || !online} onClick={() => void action(() => startPlayerMatch(match.id))}>AVVIA PARTITA</button></>}
       {match.status === 'playing' && countdown === 0 && <div className="match-controls">{match.pause_allowed && (match.paused_at ? <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => resumeMatch(match.id))}>Riprendi</button> : <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => pauseMatch(match.id))}>Pausa</button>)}<button className="danger-soft" disabled={busy || !online || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina partita</button></div>}
       {confirmEnd && match.status === 'playing' && <div className="confirm-result end-match-confirm"><strong>Concludere la partita?</strong><p>La partita verrà chiusa e si passerà all’inserimento del risultato.</p><div><button disabled={busy} onClick={() => setConfirmEnd(false)}>Continua a giocare</button><button className="confirm end-confirm-button" disabled={busy || !online} onClick={() => { setConfirmEnd(false); void action(() => endMatchEarly(match.id)); }}>CONCLUDI PARTITA</button></div></div>}
       {match.status === 'awaiting_result' && <section className="score-entry"><div className="eyebrow light-text">PARTITA TERMINATA</div>{match.stage !== 'group' && <p>Se eravate pari allo scadere, continuate a giocare il <strong>golden goal</strong>. Poi inserite il risultato finale.</p>}<div className="score-inputs"><label><span>{a}</span><input type="number" min="0" inputMode="numeric" value={score1} onChange={(e) => { setScore1(e.target.value); setConfirming(false); }} /></label><strong>–</strong><label><span>{b}</span><input type="number" min="0" inputMode="numeric" value={score2} onChange={(e) => { setScore2(e.target.value); setConfirming(false); }} /></label></div>{!confirming ? <button className="giant-button" disabled={!online} onClick={() => setConfirming(true)}>Controlla risultato</button> : <div className="confirm-result"><strong>Confermi {a} {score1 || '0'} – {score2 || '0'} {b}?</strong><p>Dopo la conferma solo l'admin potrà modificarlo.</p><div><button onClick={() => setConfirming(false)}>Indietro</button><button className="confirm" disabled={busy || !online} onClick={() => void submit()}>CONFERMA</button></div></div>}</section>}
