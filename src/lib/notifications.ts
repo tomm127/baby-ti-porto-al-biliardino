@@ -1,4 +1,5 @@
 import { ensureAnonymousPlayerSession, hasSupabaseConfig, supabase } from './supabase.ts';
+import { primeBtpbAlertSound } from './alertSound.ts';
 
 export type NotificationState = 'unsupported' | 'needs-install' | 'default' | 'denied' | 'enabled' | 'disabled';
 
@@ -48,6 +49,9 @@ export async function getNotificationState(): Promise<NotificationState> {
 }
 
 export async function enableNotifications(tournamentId: string): Promise<void> {
+  // This function is called from the user's "enable notifications" tap.
+  // Use that gesture to unlock the separate multimedia alert sound too.
+  void primeBtpbAlertSound();
   if (!supportsWebPush()) throw new Error('Questo browser non supporta le notifiche push web.');
   if (isIOSLike() && !isStandaloneApp()) {
     throw new Error('Su iPhone/iPad aggiungi prima l’app alla schermata Home, poi aprila dall’icona e attiva le notifiche.');

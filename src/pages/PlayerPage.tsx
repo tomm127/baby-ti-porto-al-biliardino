@@ -21,6 +21,7 @@ import { navigate } from '../router.ts';
 import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { useConnectivity } from '../lib/useConnectivity.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
+import { playBtpbAlertSound, primeBtpbAlertSound } from '../lib/alertSound.ts';
 
 interface Props { slug: string; matchId?: string; }
 
@@ -490,6 +491,8 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   }
 
   function fireMatchEndFeedback() {
+    // Real HTML media sound: behaves like audio/video while the app is active.
+    void playBtpbAlertSound();
     setTimerEndAlert(true);
     playMatchEndSound();
 
@@ -506,6 +509,8 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   }
 
   async function startPlayerMatch(currentMatchId: string) {
+    // Explicit user gesture: unlock the media element before the timer starts.
+    void primeBtpbAlertSound();
     unlockMatchAudio();
     return startMatch(currentMatchId);
   }

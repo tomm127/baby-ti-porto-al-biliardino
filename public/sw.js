@@ -1,5 +1,5 @@
-const CACHE = 'baby-biliardino-shell-v5';
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png'];
+const CACHE = 'baby-biliardino-shell-v6';
+const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png', '/sounds/btpb-alert.wav'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
@@ -67,7 +67,17 @@ self.addEventListener('push', (event) => {
     data: { url: data.url || '/', kind: data.kind, ...(data.data || {}) },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  const show = self.registration.showNotification(title, options);
+  const pingOpenApp = self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) =>
+    Promise.all(clients.map((client) => client.postMessage({
+      type: 'BTPB_PUSH_ALERT',
+      kind: data.kind,
+      title,
+      body: options.body,
+    }))),
+  );
+
+  event.waitUntil(Promise.all([show, pingOpenApp]));
 });
 
 self.addEventListener('notificationclick', (event) => {
