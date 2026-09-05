@@ -1439,3 +1439,201 @@
 }
 
 /* BTPB TV BIGGER TYPE V2 END */
+
+/* BTPB TV SPACING TYPE V3 START */
+
+/*
+ * More distance readability:
+ * - CAMPO label separated from team names
+ * - larger live team names
+ * - larger queue names while preserving 10 fixed rows
+ * - no overlap: live names wrap inside card; queue names ellipsize
+ */
+
+/* Give every live card a little more breathing room. */
+.tv-v2 .tv-field {
+  padding: clamp(18px, 1.2vw, 25px);
+  row-gap: 0;
+}
+
+/* CAMPO N remains a heading, clearly detached from the matchup. */
+.tv-v2 .tv-field-name {
+  font-size: clamp(22px, 1.48vw, 30px);
+  line-height: 1;
+  margin-bottom: clamp(14px, 1.5vh, 22px);
+}
+
+/* Matchup occupies its own visual block. */
+.tv-v2 .tv-field-teams {
+  align-self: start;
+  min-width: 0;
+  padding: 0 0 clamp(10px, 1vh, 15px);
+  gap: clamp(7px, .7vh, 12px);
+  overflow: hidden;
+}
+
+.tv-v2 .tv-field-teams > strong {
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(40px, 2.9vw, 58px);
+  line-height: 1.02;
+  letter-spacing: -.025em;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-field-teams > strong .team-label {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: .30em;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-field-teams > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--tv-ink) !important;
+  font-size: inherit !important;
+  line-height: 1.02 !important;
+  font-weight: inherit !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tv-v2 .tv-field-teams > span {
+  font-size: clamp(15px, .95vw, 20px);
+  line-height: 1;
+}
+
+/* PRONTA / timer slightly larger too, but stays anchored bottom-right. */
+.tv-v2 .tv-field-clock {
+  min-width: clamp(190px, 13vw, 220px);
+  padding: 13px 20px;
+  font-size: clamp(39px, 3.15vw, 62px);
+  line-height: .9;
+}
+
+/* Queue heading */
+.tv-v2 .tv-section-title > span {
+  font-size: clamp(23px, 1.52vw, 31px);
+  line-height: 1;
+}
+
+.tv-v2 .tv-section-title > strong {
+  font-size: clamp(16px, 1vw, 20px);
+}
+
+/* Keep the ten rows fixed: grow horizontally, not vertically. */
+.tv-v2 .tv-fixed-queue-row {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-number {
+  font-size: clamp(18px, 1.15vw, 23px);
+  line-height: 1;
+}
+
+.tv-v2 .tv-fixed-queue-content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* A touch more width for metadata so PROSSIMI + Girone fit comfortably. */
+.tv-v2 .tv-fixed-queue-content {
+  grid-template-columns: minmax(105px, .25fr) minmax(0, 1fr);
+  gap: clamp(12px, .8vw, 18px);
+}
+
+.tv-v2 .tv-fixed-queue-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-meta strong {
+  font-size: clamp(16px, 1.02vw, 21px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tv-v2 .tv-fixed-queue-meta small {
+  font-size: clamp(15px, .96vw, 19px);
+  line-height: 1.04;
+}
+
+.tv-v2 .tv-fixed-queue-match {
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(24px, 1.58vw, 34px);
+  line-height: 1;
+  gap: clamp(9px, .58vw, 13px);
+}
+
+.tv-v2 .tv-fixed-queue-match > strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong .team-label {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-v2 .tv-fixed-queue-match > em {
+  flex: none;
+  font-size: .62em;
+}
+
+/* Footer: readable but still visually secondary. */
+.tv-v2 .tv-footer-brand strong {
+  font-size: clamp(23px, 1.5vw, 30px);
+}
+
+.tv-v2 .tv-footer-brand span,
+.tv-v2 .tv-qr-copy span {
+  font-size: clamp(14px, .9vw, 18px);
+}
+
+.tv-v2 .tv-qr-copy > strong {
+  font-size: clamp(22px, 1.42vw, 29px);
+}
+
+/* On shorter TVs protect vertical rhythm instead of allowing collisions. */
+@media (max-height: 760px) {
+  .tv-v2 .tv-field-name {
+    margin-bottom: clamp(10px, 1vh, 14px);
+  }
+
+  .tv-v2 .tv-field-teams > strong {
+    font-size: clamp(35px, 2.55vw, 50px);
+  }
+
+  .tv-v2 .tv-field-clock {
+    font-size: clamp(35px, 2.8vw, 54px);
+  }
+
+  .tv-v2 .tv-fixed-queue-match {
+    font-size: clamp(21px, 1.38vw, 29px);
+  }
+
+  .tv-v2 .tv-fixed-queue-meta strong,
+  .tv-v2 .tv-fixed-queue-meta small {
+    font-size: clamp(14px, .86vw, 18px);
+  }
+}
+
+/* BTPB TV SPACING TYPE V3 END */

@@ -3561,3 +3561,45 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB AVATAR SIZE V2 END */
+
+/* BTPB AVATAR SIZE V3 START */
+
+/* Slightly larger throughout the app. */
+.team-label-avatar {
+  width: clamp(27px, 1.16em, 44px);
+  height: clamp(27px, 1.16em, 44px);
+  flex: 0 0 auto;
+}
+
+.team-search-option-name img {
+  width: 36px;
+  height: 36px;
+}
+
+/* Player match page */
+.match-team-names .team-label-avatar {
+  width: clamp(32px, 1em, 48px);
+  height: clamp(32px, 1em, 48px);
+}
+
+/* TV live cards: clearly visible from a distance. */
+.tv-v2 .tv-field-teams .team-label-avatar {
+  width: clamp(38px, 2.35vw, 50px);
+  height: clamp(38px, 2.35vw, 50px);
+  flex: 0 0 auto;
+}
+
+/* TV queue: bigger, but still guaranteed to fit the ten rows. */
+.tv-v2 .tv-fixed-queue-match .team-label-avatar {
+  width: clamp(30px, 1.65vw, 36px);
+  height: clamp(30px, 1.65vw, 36px);
+  flex: 0 0 auto;
+}
+
+/* Knockout */
+.bracket-team .team-label-avatar {
+  width: 26px;
+  height: 26px;
+}
+
+/* BTPB AVATAR SIZE V3 END */

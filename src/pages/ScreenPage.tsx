@@ -107,7 +107,7 @@ export function ScreenPage({ slug }: { slug: string }) {
           <span className="tv-fixed-queue-number">{index + 1}</span>
           <div className="tv-fixed-queue-content">
             <div className="tv-fixed-queue-meta">
-              {isPrepare && <strong>PREPARATEVI</strong>}
+              {isPrepare && <strong>PROSSIMI</strong>}
               <small>{stageLabel(bundle, match)}</small>
             </div>
             <div className="tv-fixed-queue-match">
