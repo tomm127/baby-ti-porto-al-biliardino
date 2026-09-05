@@ -625,7 +625,7 @@
 
 
 /* TV live VS style fix */
-.tv-v2 .tv-field-teams span {
+.tv-v2 .tv-field-teams > span {
   color: #8b7650 !important;
   font-size: clamp(18px, 1.1vw, 24px) !important;
   font-weight: 950 !important;
@@ -1637,3 +1637,13 @@
 }
 
 /* BTPB TV SPACING TYPE V3 END */
+
+/* BTPB TV TEAM NAVY COLOR V1 START */
+
+.tv-v2 .tv-field-teams > strong,
+.tv-v2 .tv-field-teams > strong .team-label,
+.tv-v2 .tv-field-teams > strong .team-label-text {
+  color: var(--tv-ink) !important;
+}
+
+/* BTPB TV TEAM NAVY COLOR V1 END */
