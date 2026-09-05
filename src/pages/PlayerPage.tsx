@@ -379,7 +379,7 @@ function AllMatchesView({ bundle }: { bundle: TournamentBundle }) {
   const source = mode === 'past' ? past : future;
   const filtered = source.filter((m) => !normalized || normalizeTextSearch(`${teamName(bundle,m.team1_id)} ${teamName(bundle,m.team2_id)} ${matchStageLabel(bundle,m)}`).includes(normalized));
   return <div className="matches-page-v2">
-    <section className="live-fields-section"><div className="section-heading-v2"><div><span>LIVE</span><h2>Campi</h2></div><small>{activeFields.length} attivi</small></div><div className="player-live-fields">{activeFields.map((field) => { const match = bundle.matches.find((m) => m.field_id === field.id && liveStatuses.includes(m.status)); return <article className={match ? 'player-live-field active' : 'player-live-field'} key={field.id}><span>{field.name}</span>{match ? <><strong>{teamName(bundle,match.team1_id)}</strong><small>VS</small><strong>{teamName(bundle,match.team2_id)}</strong>{match.status !== 'awaiting_result' && <em>{statusLabel(match.status)}</em>}</> : <div className="field-free-player">LIBERO</div>}</article>; })}</div></section>
+    <section className="live-fields-section"><div className="section-heading-v2"><div><span>LIVE</span><h2>Campi</h2></div><small>{activeFields.length} attivi</small></div><div className="player-live-fields">{activeFields.map((field) => { const match = bundle.matches.find((m) => m.field_id === field.id && liveStatuses.includes(m.status)); return <article className={match ? 'player-live-field active' : 'player-live-field'} key={field.id}><span>{field.name}</span>{match ? <><strong>{teamName(bundle,match.team1_id)}</strong><small>VS</small><strong>{teamName(bundle,match.team2_id)}</strong>{!['awaiting_result','called'].includes(match.status) && <em>{statusLabel(match.status)}</em>}</> : <div className="field-free-player">LIBERO</div>}</article>; })}</div></section>
     <section className="panel all-matches-panel"><div className="matches-toolbar"><div className="segmented-control"><button className={mode === 'past' ? 'active' : ''} onClick={() => setMode('past')}>Passate</button><button className={mode === 'future' ? 'active' : ''} onClick={() => setMode('future')}>Future</button></div><div className="match-search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cerca squadra o girone" /></div></div><div className="player-match-list global">{filtered.length === 0 && <div className="empty-state">Nessuna partita trovata.</div>}{filtered.map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div></section>
   </div>;
 }
@@ -587,6 +587,41 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
     finally { setBusy(false); }
   }
 
+  async function openScoreEntryFromEndAlert() {
+    const currentMatch = match;
+    if (!currentMatch) return;
+    if (endAlertTimeout.current) {
+      window.clearTimeout(endAlertTimeout.current);
+      endAlertTimeout.current = null;
+    }
+
+    setTimerEndAlert(false);
+
+    if (currentMatch.status === 'awaiting_result') return;
+    if (currentMatch.status !== 'playing') return;
+
+    if (!online) {
+      setError('Per passare all’inserimento del punteggio serve la connessione.');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+
+    try {
+      try {
+        await markTimerExpired(currentMatch.id);
+      } catch {
+        // L'altro telefono può aver già completato la transizione.
+      }
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit() {
     const s1 = Number(score1), s2 = Number(score2);
     if (!Number.isInteger(s1) || !Number.isInteger(s2) || s1 < 0 || s2 < 0) { setError('Inserisci due punteggi validi.'); return; }
@@ -596,9 +631,23 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
 
   return <main className={timerEndAlert ? 'match-screen match-end-alerting' : 'match-screen'}>
     {bundle.settings.emergency_paused && <TournamentPausedOverlay dark />}
-    {timerEndAlert && <div className="match-end-flash" role="alert" aria-live="assertive">
+    {timerEndAlert && <div
+      className="match-end-flash"
+      role="button"
+      tabIndex={0}
+      aria-label="Tempo finito. Tocca per inserire il punteggio."
+      aria-live="assertive"
+      onClick={() => void openScoreEntryFromEndAlert()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          void openScoreEntryFromEndAlert();
+        }
+      }}
+    >
       <strong>TEMPO FINITO</strong>
       <span>PARTITA TERMINATA</span>
+      <small>TOCCA PER INSERIRE IL PUNTEGGIO</small>
     </div>}
     <ConnectionBanner online={online} cachedAt={cachedAt} />
     <header className="match-top"><button className="icon-button light" onClick={() => navigate(`/tournament/${slug}`)}>←</button><div><span>{bundle.tournament.name}</span><strong>{field}</strong></div></header>

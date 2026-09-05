@@ -134,15 +134,16 @@ export async function playBtpbCountdownBeep(step: number) {
 
   const now = ctx.currentTime + 0.01;
 
-  if (step === 3 || step === 2) {
-    // Two clear "ready" horns.
-    const base = step === 3 ? 430 : 500;
-    scheduleTone(ctx, base, now, 0.30, 0.30, 'triangle');
-    scheduleTone(ctx, base * 2, now, 0.30, 0.075, 'sine');
+  if (step === 3) {
+    scheduleSweep(ctx, 720, 880, now, 0.22, 0.25, 'sine');
+    scheduleTone(ctx, 1440, now, 0.15, 0.055, 'sine');
+  } else if (step === 2) {
+    scheduleSweep(ctx, 820, 1020, now, 0.24, 0.28, 'sine');
+    scheduleTone(ctx, 1640, now, 0.16, 0.06, 'sine');
   } else {
-    // Longer rising START signal.
-    scheduleSweep(ctx, 620, 980, now, 0.72, 0.38, 'triangle');
-    scheduleSweep(ctx, 1240, 1760, now, 0.72, 0.09, 'sine');
+    scheduleSweep(ctx, 760, 1520, now, 0.92, 0.40, 'triangle');
+    scheduleSweep(ctx, 1520, 2280, now, 0.92, 0.095, 'sine');
+    scheduleTone(ctx, 3040, now + 0.10, 0.58, 0.035, 'sine');
   }
 
   return true;
@@ -158,12 +159,14 @@ export async function playBtpbTimerEndAlarm() {
 
   const base = ctx.currentTime + 0.015;
 
-  // Two long descending whistles: clearly different from the 3-2-1 start.
-  scheduleSweep(ctx, 1120, 620, base, 0.92, 0.40, 'sawtooth');
-  scheduleSweep(ctx, 2240, 1240, base, 0.92, 0.055, 'sine');
+  scheduleSweep(ctx, 1320, 1120, base, 0.34, 0.37, 'triangle');
+  scheduleTone(ctx, 2640, base, 0.24, 0.055, 'sine');
 
-  scheduleSweep(ctx, 980, 430, base + 1.08, 1.18, 0.42, 'sawtooth');
-  scheduleSweep(ctx, 1960, 860, base + 1.08, 1.18, 0.06, 'sine');
+  scheduleSweep(ctx, 1380, 1160, base + 0.48, 0.34, 0.38, 'triangle');
+  scheduleTone(ctx, 2760, base + 0.48, 0.24, 0.055, 'sine');
+
+  scheduleSweep(ctx, 1520, 720, base + 0.98, 1.55, 0.43, 'sawtooth');
+  scheduleSweep(ctx, 3040, 1440, base + 0.98, 1.55, 0.055, 'sine');
 
   return true;
 }

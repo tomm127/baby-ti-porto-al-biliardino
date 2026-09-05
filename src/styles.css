@@ -3206,3 +3206,33 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB ADMIN RESULTS + SCORE ENTRY V1 END */
+
+/* BTPB PLAYER END TAP + SOUND V1 START */
+
+.match-end-flash {
+  pointer-events: auto !important;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.match-end-flash:focus-visible {
+  outline: 5px solid rgba(255,255,255,.9);
+  outline-offset: -10px;
+}
+
+.match-end-flash small {
+  margin-top: clamp(18px, 5vh, 34px);
+  padding: 11px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+  border: 1px solid currentColor;
+  color: inherit;
+  font-size: clamp(12px, 3.6vw, 17px);
+  font-weight: 1000;
+  letter-spacing: .08em;
+  opacity: .96;
+}
+
+/* BTPB PLAYER END TAP + SOUND V1 END */
