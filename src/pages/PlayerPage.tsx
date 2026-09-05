@@ -390,11 +390,18 @@ function MyTeam({ bundle, teamId, onChanged }: { bundle: TournamentBundle; teamI
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [teamChangeSuccess, setTeamChangeSuccess] = useState<string | null>(null);
   const currentTeam = teamName(bundle, teamId);
   async function change() {
     if (!newTeamId || newTeamId === teamId) return;
+    const nextTeamName = teamName(bundle, newTeamId);
     setBusy(true); setError('');
-    try { await claimTeam(newTeamId, bundle.settings.team_pin_enabled ? pin : undefined); window.localStorage.setItem(LAST_PLAYER_TOURNAMENT_KEY, bundle.tournament.slug); await onChanged(); }
+    try {
+      await claimTeam(newTeamId, bundle.settings.team_pin_enabled ? pin : undefined);
+      window.localStorage.setItem(LAST_PLAYER_TOURNAMENT_KEY, bundle.tournament.slug);
+      await onChanged();
+      setTeamChangeSuccess(nextTeamName);
+    }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   }
@@ -403,7 +410,14 @@ function MyTeam({ bundle, teamId, onChanged }: { bundle: TournamentBundle; teamI
     try { await leaveTeam(bundle.tournament.id); window.localStorage.removeItem(LAST_PLAYER_TOURNAMENT_KEY); await onChanged(); }
     finally { setBusy(false); }
   }
-  return <section className="panel form-panel my-team-v2"><div className="eyebrow">SQUADRA ASSOCIATA</div><h2>{currentTeam}</h2><p className="hint">Per cambiare squadra cercane un'altra qui sotto e conferma.</p><label>Nuova squadra</label><SearchableTeamPicker teams={bundle.teams.filter((team) => bundle.groupTeams.some((membership) => membership.team_id === team.id))} selectedId={newTeamId} onSelect={(id) => { setNewTeamId(id); setPin(''); }} placeholder="Cerca la nuova squadra" />{bundle.settings.team_pin_enabled && newTeamId && newTeamId !== teamId && <><label>PIN nuova squadra</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{error}</div>}<button className="button primary" disabled={busy || !online || !newTeamId || newTeamId === teamId} onClick={() => void change()}>Cambia squadra</button><button className="button ghost" disabled={busy || !online} onClick={() => void remove()}>Dissocia questo dispositivo</button></section>;
+  return <section className="panel form-panel my-team-v2"><div className="eyebrow">SQUADRA ASSOCIATA</div><h2>{currentTeam}</h2><p className="hint">Per cambiare squadra cercane un'altra qui sotto e conferma.</p><label>Nuova squadra</label><SearchableTeamPicker teams={bundle.teams.filter((team) => bundle.groupTeams.some((membership) => membership.team_id === team.id))} selectedId={newTeamId} onSelect={(id) => { setNewTeamId(id); setPin(''); }} placeholder="Cerca la nuova squadra" />{bundle.settings.team_pin_enabled && newTeamId && newTeamId !== teamId && <><label>PIN nuova squadra</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{error}</div>}<button className="button primary" disabled={busy || !online || !newTeamId || newTeamId === teamId} onClick={() => void change()}>Cambia squadra</button><button className="button ghost" disabled={busy || !online} onClick={() => void remove()}>Dissocia questo dispositivo</button>{teamChangeSuccess && <div className="team-change-feedback-backdrop">
+    <div className="team-change-feedback" role="dialog" aria-modal="true" aria-labelledby="team-change-feedback-title">
+      <div className="team-change-feedback-check">✓</div>
+      <h3 id="team-change-feedback-title">Squadra cambiata</h3>
+      <p>Questo telefono ora è associato a <strong>{teamChangeSuccess}</strong>.</p>
+      <button className="button primary" autoFocus onClick={() => setTeamChangeSuccess(null)}>OK</button>
+    </div>
+  </div>}</section>;
 }
 
 function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {

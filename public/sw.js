@@ -1,4 +1,4 @@
-const CACHE = 'baby-biliardino-shell-v6';
+const CACHE = 'baby-biliardino-shell-v7';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png', '/sounds/btpb-alert.wav'];
 
 self.addEventListener('install', (event) => {

@@ -3236,3 +3236,67 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB PLAYER END TAP + SOUND V1 END */
+
+/* BTPB TEAM CHANGE FEEDBACK V1 START */
+
+.team-change-feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(23,38,56,.38);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.team-change-feedback {
+  width: min(360px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 28px 24px 22px;
+  border: 1px solid #d8d4ca;
+  border-radius: 22px;
+  background: #fffdf8;
+  color: #18283a;
+  box-shadow: 0 24px 70px rgba(24,40,58,.22);
+  text-align: center;
+}
+
+.team-change-feedback-check {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e5efed;
+  color: #3e7770;
+  font-size: 30px;
+  font-weight: 1000;
+}
+
+.team-change-feedback h3 {
+  margin: 4px 0 0;
+  font-size: 25px;
+  letter-spacing: -.03em;
+}
+
+.team-change-feedback p {
+  margin: 0;
+  color: #66717b;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.team-change-feedback p strong {
+  color: #18283a;
+}
+
+.team-change-feedback .button {
+  width: 100%;
+  margin-top: 5px;
+}
+
+/* BTPB TEAM CHANGE FEEDBACK V1 END */
