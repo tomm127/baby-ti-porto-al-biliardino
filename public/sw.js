@@ -1,4 +1,4 @@
-const CACHE = 'baby-biliardino-shell-v8';
+const CACHE = 'baby-biliardino-shell-v9';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png', '/sounds/race-start-beeps-125125.mp3', '/sounds/boxing-bell-1-232450.mp3', '/sounds/new-notification-09-352705.mp3'];
 
 self.addEventListener('install', (event) => {
@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
   // Vite's production assets are content-hashed. Cache them locally so the app
   // shell keeps opening even if Wi-Fi drops during the tournament. Use
   // stale-while-revalidate for non-navigation same-origin assets.
-  if (['script', 'style', 'image', 'font', 'manifest'].includes(request.destination)) {
+  if (['script', 'style', 'image', 'font', 'manifest', 'audio'].includes(request.destination)) {
     event.respondWith(
       caches.match(request).then((cached) => {
         const network = fetch(request).then((response) => {
@@ -67,17 +67,27 @@ self.addEventListener('push', (event) => {
     data: { url: data.url || '/', kind: data.kind, ...(data.data || {}) },
   };
 
-  const show = self.registration.showNotification(title, options);
-  const pingOpenApp = self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) =>
-    Promise.all(clients.map((client) => client.postMessage({
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    });
+
+    const visibleClients = clients.filter(
+      (client) => client.visibilityState === 'visible',
+    );
+
+    await Promise.all(visibleClients.map((client) => client.postMessage({
       type: 'BTPB_PUSH_ALERT',
       kind: data.kind,
       title,
       body: options.body,
-    }))),
-  );
+    })));
 
-  event.waitUntil(Promise.all([show, pingOpenApp]));
+    if (visibleClients.length === 0) {
+      await self.registration.showNotification(title, options);
+    }
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {

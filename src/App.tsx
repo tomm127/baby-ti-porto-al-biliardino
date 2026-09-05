@@ -5,6 +5,14 @@ import { PlayerPage } from './pages/PlayerPage.tsx';
 import { ScreenPage } from './pages/ScreenPage.tsx';
 import { WinnersPage } from './pages/WinnersPage.tsx';
 
+function safeDecodePathPart(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export function App() {
   const [path, setPath] = useState(window.location.pathname);
 
@@ -14,7 +22,7 @@ export function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const parts = path.split('/').filter(Boolean).map(decodeURIComponent);
+  const parts = path.split('/').filter(Boolean).map(safeDecodePathPart);
   if (parts[0] === 'albo-vincitori') return <WinnersPage />;
   if (parts[0] === 'admin') return <AdminPage />;
   if (parts[0] === 'screen' && parts[1]) return <ScreenPage slug={parts[1]} />;

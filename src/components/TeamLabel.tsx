@@ -15,7 +15,15 @@ export function TeamLabel({
   const label = name ?? team?.name ?? 'Da definire';
 
   return <span className={`team-label${className ? ` ${className}` : ''}`}>
-    {team?.avatar_url && <img className="team-label-avatar" src={team.avatar_url} alt="" loading="lazy" />}
+    {team?.avatar_url && <img
+      key={team.avatar_url}
+      className="team-label-avatar"
+      src={team.avatar_url}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={(event) => { event.currentTarget.hidden = true; }}
+    />}
     <span className="team-label-text">{label}</span>
   </span>;
 }

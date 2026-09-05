@@ -320,7 +320,7 @@
   padding-left: clamp(4px, .35vw, 10px);
 }
 
-.tv-v2 .tv-prepare-match span {
+.tv-v2 .tv-prepare-match > span {
   color: #8f8261 !important;
   font-size: clamp(13px, .85vw, 17px);
   font-weight: 950;
@@ -618,7 +618,7 @@
   padding-left: 0 !important;
 }
 
-.tv-v2 .tv-prepare-match span {
+.tv-v2 .tv-prepare-match > span {
   justify-self: center !important;
   text-align: center !important;
 }
@@ -1856,3 +1856,32 @@
 }
 
 /* BTPB TV TEXT OVERFLOW AUDIT V1 END */
+
+/* BTPB TV STABILITY AUDIT V1 START */
+
+.tv-v2 .tv-field-teams > strong .team-label,
+.tv-v2 .tv-field-teams > strong .team-label-text,
+.tv-v2 .tv-fixed-queue-match > strong .team-label,
+.tv-v2 .tv-fixed-queue-match > strong .team-label-text,
+.tv-v2 .bracket-team .team-label,
+.tv-v2 .bracket-team .team-label-text {
+  opacity: 1 !important;
+  color: var(--tv-ink) !important;
+}
+
+/* Dynamic viewport prevents browser UI from shaving pixels off the TV. */
+@supports (height: 100dvh) {
+  .screen-mode.tv-v2 {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  @media (max-width: 900px) {
+    .screen-mode.tv-v2:has(.tv-middle-queue-only) {
+      height: auto;
+      min-height: 100dvh;
+    }
+  }
+}
+
+/* BTPB TV STABILITY AUDIT V1 END */
