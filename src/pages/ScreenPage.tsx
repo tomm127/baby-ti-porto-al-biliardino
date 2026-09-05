@@ -5,6 +5,7 @@ import { useConnectivity } from '../lib/useConnectivity.ts';
 import { navigate } from '../router.ts';
 import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
+import { TeamLabel } from '../components/TeamLabel.tsx';
 import '../tv.css';
 
 
@@ -110,9 +111,9 @@ export function ScreenPage({ slug }: { slug: string }) {
               <small>{stageLabel(bundle, match)}</small>
             </div>
             <div className="tv-fixed-queue-match">
-              <strong>{teamName(bundle, match.team1_id)}</strong>
+              <strong><TeamLabel bundle={bundle} teamId={match.team1_id} name={teamName(bundle, match.team1_id)} /></strong>
               <em>vs</em>
-              <strong>{teamName(bundle, match.team2_id)}</strong>
+              <strong><TeamLabel bundle={bundle} teamId={match.team2_id} name={teamName(bundle, match.team2_id)} /></strong>
             </div>
           </div>
         </div>;
@@ -170,7 +171,7 @@ function ScreenField({ name, match, bundle, flash }: { name: string; match?: Mat
 
   return <article className={flash ? 'tv-field active new-match' : 'tv-field active'}>
     <div className="tv-field-name">{name}</div>
-    <div className="tv-field-teams"><strong>{teamName(bundle, match.team1_id)}</strong><span>VS</span><strong>{teamName(bundle, match.team2_id)}</strong></div>
+    <div className="tv-field-teams"><strong><TeamLabel bundle={bundle} teamId={match.team1_id} name={teamName(bundle, match.team1_id)} /></strong><span>VS</span><strong><TeamLabel bundle={bundle} teamId={match.team2_id} name={teamName(bundle, match.team2_id)} /></strong></div>
     <div className="tv-field-clock">{clock}</div>
     {flash && <div className="tv-new-match-label">NUOVA PARTITA</div>}
   </article>;

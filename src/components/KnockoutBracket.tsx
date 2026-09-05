@@ -1,4 +1,5 @@
 import type { MatchRow, TournamentBundle } from '../lib/api.ts';
+import { TeamLabel } from './TeamLabel.tsx';
 
 export function KnockoutBracket({ bundle, compact = false }: { bundle: TournamentBundle; compact?: boolean }) {
   const rounds = [...bundle.knockoutRounds].sort((a, b) => a.round_number - b.round_number);
@@ -41,7 +42,7 @@ export function QualificationRanking({ bundle }: { bundle: TournamentBundle }) {
     <div className="qualification-list">
       {bundle.qualifiers.map((q) => <div className="qualification-row" key={q.team_id}>
         <span className="seed-badge">#{q.global_seed}</span>
-        <strong>{teamName(bundle, q.team_id)}</strong>
+        <strong><TeamLabel bundle={bundle} teamId={q.team_id} name={teamName(bundle, q.team_id)} /></strong>
         <span>{groupName(bundle, q.group_id)} · {q.group_rank}ª</span>
         <span>{trimNumber(q.points_per_game)} pt/p</span>
         <span>DR/p {signedNumber(q.goal_difference_per_game)}</span>
@@ -61,12 +62,12 @@ function BracketMatch({ match, bundle, compact }: { match: MatchRow; bundle: Tou
   return <div className={`bracket-match status-${match.status}${bye ? ' bye' : ''}`}>
     <div className={match.winner_team_id === match.team1_id ? 'bracket-team winner' : 'bracket-team'}>
       <span className="bracket-seed">{seed1 ? `#${seed1}` : '·'}</span>
-      <strong>{team1}</strong>
+      <strong><TeamLabel bundle={bundle} teamId={match.team1_id} name={team1} /></strong>
       <span className="bracket-score">{scoreReady ? match.score_team1 : ''}</span>
     </div>
     <div className={match.winner_team_id === match.team2_id ? 'bracket-team winner' : 'bracket-team'}>
       <span className="bracket-seed">{seed2 ? `#${seed2}` : '·'}</span>
-      <strong>{team2}</strong>
+      <strong><TeamLabel bundle={bundle} teamId={match.team2_id} name={team2} /></strong>
       <span className="bracket-score">{scoreReady ? match.score_team2 : ''}</span>
     </div>
     {!compact && <div className="bracket-status">{bye ? 'BYE' : statusLabel(match.status)}</div>}

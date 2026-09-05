@@ -11,6 +11,8 @@ import {
   adminForceMoveTeamToGroup,
   adminRenameTeam,
   adminSetTeamPin,
+  adminUploadTeamAvatar,
+  adminRemoveTeamAvatar,
   adminAddField,
   adminUpdateField,
   adminAssignMatchField,
@@ -46,6 +48,7 @@ import { navigate } from '../router.ts';
 import { KnockoutBracket, QualificationRanking } from '../components/KnockoutBracket.tsx';
 import { useConnectivity } from '../lib/useConnectivity.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
+import { TeamLabel } from '../components/TeamLabel.tsx';
 
 type AdminTab = 'live' | 'teams' | 'groups' | 'bracket' | 'matches' | 'fields' | 'settings';
 
@@ -322,7 +325,7 @@ function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPa
       >
         <span className="queue-drag" title="Trascina">⋮⋮</span>
         <span className="queue-number">{i+1}</span>
-        <div className="queue-match-copy"><small>{adminStageLabel(bundle,m)}</small><strong>{teamName(bundle,m.team1_id)} vs {teamName(bundle,m.team2_id)}</strong></div>
+        <div className="queue-match-copy"><small>{adminStageLabel(bundle,m)}</small><strong className="team-pair-label"><TeamLabel bundle={bundle} teamId={m.team1_id} /><em>vs</em><TeamLabel bundle={bundle} teamId={m.team2_id} /></strong></div>
         <div className="queue-controls">
           <button title="In cima" disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,0)}>⇈</button>
           <button title="Su" disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i-1)}>↑</button>
@@ -356,7 +359,7 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused 
 
   return <section className={tournamentPaused ? 'field-card admin-field-paused' : 'field-card'}>
     <div className="panel-title"><strong>{fieldName}</strong><span>{tournamentPaused ? 'TORNEO IN PAUSA' : adminStatusLabel(liveMatch.status)}</span></div>
-    <div className="field-match"><strong>{t1}</strong><small>VS</small><strong>{t2}</strong></div>
+    <div className="field-match"><strong><TeamLabel bundle={bundle} teamId={liveMatch.team1_id} name={t1} /></strong><small>VS</small><strong><TeamLabel bundle={bundle} teamId={liveMatch.team2_id} name={t2} /></strong></div>
     <div className="big-timer">{liveMatch.duration_seconds == null ? '∞' : formatClock(remaining)}</div>
     <div className="actions field-actions">
       {['called','ready'].includes(liveMatch.status) && <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => startMatch(liveMatch.id))}>Avvia</button>}
@@ -515,6 +518,14 @@ function TeamsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   async function rename(teamId:string,current:string){ const next=window.prompt('Nuovo nome squadra',current); if(next===null||!next.trim()||next.trim()===current)return; await act(teamId,()=>adminRenameTeam(teamId,next)); }
   async function changePin(teamId:string){ const next=window.prompt('Nuovo PIN. Lascia vuoto per rimuoverlo.'); if(next===null)return; await act(`pin-${teamId}`,()=>adminSetTeamPin(teamId,next)); }
 
+  async function uploadAvatar(teamId:string,file:File){
+    await act(`avatar-${teamId}`,()=>adminUploadTeamAvatar(bundle.tournament.id,teamId,file));
+  }
+  async function removeAvatar(teamId:string){
+    if(!window.confirm('Rimuovere l’immagine di questa squadra?'))return;
+    await act(`avatar-${teamId}`,()=>adminRemoveTeamAvatar(bundle.tournament.id,teamId));
+  }
+
   async function move(teamId:string,currentGroup:string,target:string){
     const nextGroup=target||null;
     if((currentGroup||null)===nextGroup)return;
@@ -567,6 +578,13 @@ function TeamsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 
     <section className="panel"><div className="panel-title"><h2>{bundle.teams.length} squadre</h2><span>{bundle.teams.filter((team)=>!groupByTeam.has(team.id)).length} senza girone</span></div>
       <div className="team-admin-list">{bundle.teams.map(t=>{const currentGroup=groupByTeam.get(t.id)??'';return <div className={`team-admin-row ${t.status==='withdrawn'?'withdrawn':''}`} key={t.id}>
+        <div className="team-avatar-admin">
+          <label className="team-avatar-picker" title={t.avatar_url ? 'Cambia immagine' : 'Aggiungi immagine'}>
+            {t.avatar_url ? <img src={t.avatar_url} alt="" /> : <span>＋</span>}
+            <input type="file" accept="image/*" disabled={busy.includes(t.id)} onChange={(e)=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';if(file)void uploadAvatar(t.id,file);}} />
+          </label>
+          {t.avatar_url && <button className="team-avatar-remove" title="Rimuovi immagine" disabled={busy.includes(t.id)} onClick={()=>void removeAvatar(t.id)}>×</button>}
+        </div>
         <button className="team-name-button" disabled={busy.includes(t.id)} onClick={()=>void rename(t.id,t.name)}>{t.name}</button>
         <select value={currentGroup} disabled={!editable||t.status==='withdrawn'||busy.includes(t.id)} onChange={e=>void move(t.id,currentGroup,e.target.value)}>
           <option value="">Nessun girone</option>
@@ -802,7 +820,7 @@ function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchR
   return <div className="admin-match-row admin-match-row-v2">
     <div className="admin-match-main">
       <div className="admin-match-meta"><span className={`status-mini status-${m.status}`}>{adminStatusLabel(m.status)}</span><span>{adminStageLabel(bundle,m)}</span>{currentField&&<span>{currentField.name}</span>}</div>
-      <strong>{teamName(bundle,m.team1_id)} <em>vs</em> {teamName(bundle,m.team2_id)}</strong>
+      <strong className="team-pair-label"><TeamLabel bundle={bundle} teamId={m.team1_id} /><em>vs</em><TeamLabel bundle={bundle} teamId={m.team2_id} /></strong>
     </div>
 
     <div className="admin-match-actions-v2">

@@ -33,6 +33,7 @@ export interface TeamRow {
   tournament_id: string;
   name: string;
   status: 'active' | 'withdrawn';
+  avatar_url: string | null;
 }
 
 export interface GroupRow {
@@ -389,6 +390,88 @@ export async function submitMatchResult(matchId: string, scoreTeam1: number, sco
 }
 
 
+
+async function resizeTeamAvatar(file: File): Promise<Blob> {
+  if (!file.type.startsWith('image/')) throw new Error('Seleziona un’immagine valida.');
+  if (file.size > 15 * 1024 * 1024) throw new Error('Immagine troppo grande. Massimo 15 MB prima della compressione.');
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Non riesco a leggere questa immagine.'));
+      img.src = objectUrl;
+    });
+
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Impossibile preparare l’immagine.');
+
+    const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+    const sx = (image.naturalWidth - sourceSize) / 2;
+    const sy = (image.naturalHeight - sourceSize) / 2;
+
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/webp', 0.88),
+    );
+
+    if (!blob) throw new Error('Non riesco a comprimere l’immagine.');
+    return blob;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+export async function adminUploadTeamAvatar(tournamentId: string, teamId: string, file: File) {
+  const blob = await resizeTeamAvatar(file);
+  const path = `${tournamentId}/${teamId}/avatar.webp`;
+
+  const { error: uploadError } = await client().storage
+    .from('team-avatars')
+    .upload(path, blob, {
+      upsert: true,
+      contentType: 'image/webp',
+      cacheControl: '60',
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = client().storage.from('team-avatars').getPublicUrl(path);
+  const avatarUrl = `${data.publicUrl}?v=${Date.now()}`;
+
+  const { error } = await client().rpc('admin_set_team_avatar', {
+    p_team_id: teamId,
+    p_avatar_url: avatarUrl,
+  });
+
+  if (error) throw error;
+  return avatarUrl;
+}
+
+export async function adminRemoveTeamAvatar(tournamentId: string, teamId: string) {
+  const path = `${tournamentId}/${teamId}/avatar.webp`;
+
+  const { error: storageError } = await client().storage
+    .from('team-avatars')
+    .remove([path]);
+
+  // Removing a missing file should not prevent clearing the database reference.
+  if (storageError) console.warn('Rimozione file avatar:', storageError.message);
+
+  const { error } = await client().rpc('admin_set_team_avatar', {
+    p_team_id: teamId,
+    p_avatar_url: null,
+  });
+
+  if (error) throw error;
+}
 
 export async function adminSetEmergencyPause(tournamentId: string, paused: boolean) {
   const { data, error } = await client().rpc('admin_set_emergency_pause', {
