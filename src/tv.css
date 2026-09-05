@@ -1647,3 +1647,212 @@
 }
 
 /* BTPB TV TEAM NAVY COLOR V1 END */
+
+/* BTPB TV TEXT OVERFLOW AUDIT V1 START */
+
+/* Every major TV grid item is allowed to shrink inside the viewport. */
+.screen-mode.tv-v2,
+.tv-v2 .tv-header,
+.tv-v2 .tv-fields,
+.tv-v2 .tv-middle,
+.tv-v2 .tv-footer,
+.tv-v2 .tv-field,
+.tv-v2 .tv-queue-panel,
+.tv-v2 .tv-bracket-panel {
+  min-width: 0;
+}
+
+/* Header text wraps if the TV/browser viewport is narrower than expected. */
+.tv-v2 .tv-brand-block,
+.tv-v2 .tv-brand-block > div,
+.tv-v2 .tv-brand-block h1 {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tv-v2 .tv-brand-block h1 {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+/* -----------------------------------------------------------------------
+   LIVE FIELDS
+   Fixes cases such as "Negroni United" losing its final letters.
+   Nothing in the team-name chain clips anymore.
+   ----------------------------------------------------------------------- */
+
+.tv-v2 .tv-field-teams,
+.tv-v2 .tv-field-teams > strong,
+.tv-v2 .tv-field-teams > strong .team-label,
+.tv-v2 .tv-field-teams > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.tv-v2 .tv-field-teams > strong {
+  /* Width AND height responsive: large from distance, but safe on short TVs. */
+  font-size: clamp(34px, min(2.75vw, 4.8vh), 56px) !important;
+  line-height: 1.06 !important;
+  padding-right: 4px;
+}
+
+.tv-v2 .tv-field-teams > strong .team-label {
+  width: fit-content !important;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.tv-v2 .tv-field-teams > strong .team-label-text {
+  width: auto;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal;
+  line-height: 1.06 !important;
+}
+
+/* Keep the avatar aligned even if a long name uses two lines. */
+.tv-v2 .tv-field-teams .team-label-avatar {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* -----------------------------------------------------------------------
+   QUEUE
+   Previous rules intentionally ellipsized names. Full names now wrap,
+   while font size also reacts to screen height so 10 rows remain viable.
+   ----------------------------------------------------------------------- */
+
+.tv-v2 .tv-fixed-queue-content,
+.tv-v2 .tv-fixed-queue-meta,
+.tv-v2 .tv-fixed-queue-match,
+.tv-v2 .tv-fixed-queue-match > strong,
+.tv-v2 .tv-fixed-queue-match > strong .team-label,
+.tv-v2 .tv-fixed-queue-match > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tv-v2 .tv-fixed-queue-match {
+  font-size: clamp(16px, min(1.45vw, 2.35vh), 30px) !important;
+  line-height: .98 !important;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong,
+.tv-v2 .tv-fixed-queue-match > strong .team-label,
+.tv-v2 .tv-fixed-queue-match > strong .team-label-text {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong .team-label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong .team-label-text {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  line-height: .98;
+}
+
+.tv-v2 .tv-fixed-queue-meta strong,
+.tv-v2 .tv-fixed-queue-meta small {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+  line-height: 1;
+}
+
+/* Avoid a glyph being clipped at row edges. */
+.tv-v2 .tv-fixed-queue-row,
+.tv-v2 .tv-fixed-queue-content,
+.tv-v2 .tv-fixed-queue-match {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+/* -----------------------------------------------------------------------
+   SECTION TITLES / FOOTER / QR COPY
+   ----------------------------------------------------------------------- */
+
+.tv-v2 .tv-section-title {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.tv-v2 .tv-section-title > span,
+.tv-v2 .tv-section-title > strong {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.tv-v2 .tv-footer-brand,
+.tv-v2 .tv-footer-brand > div,
+.tv-v2 .tv-qr-copy {
+  min-width: 0;
+}
+
+.tv-v2 .tv-footer-brand strong,
+.tv-v2 .tv-footer-brand span,
+.tv-v2 .tv-qr-copy strong,
+.tv-v2 .tv-qr-copy span,
+.tv-v2 .tv-qr-copy small {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* -----------------------------------------------------------------------
+   KNOCKOUT TV
+   ----------------------------------------------------------------------- */
+
+.tv-v2 .bracket-team strong,
+.tv-v2 .bracket-team .team-label,
+.tv-v2 .bracket-team .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+}
+
+/* Narrow preview/browser windows: preserve both TV columns instead of
+   allowing a fixed minimum width to push content off-screen. */
+@media (max-width: 1250px) {
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) {
+    grid-template-columns: minmax(0,1fr) minmax(330px,.82fr) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  /* A small browser preview is more useful stacked than horizontally cut. */
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto auto !important;
+  }
+
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-header,
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-fields,
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-middle-queue-only,
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-footer {
+    grid-column: 1 !important;
+  }
+
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-header { grid-row: 1 !important; }
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-fields { grid-row: 2 !important; }
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-middle-queue-only { grid-row: 3 !important; }
+  .screen-mode.tv-v2:has(.tv-middle-queue-only) > .tv-footer { grid-row: 4 !important; }
+}
+
+/* BTPB TV TEXT OVERFLOW AUDIT V1 END */

@@ -3719,3 +3719,413 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB PLAYER FIELD TIMER + HOME AVATAR V1 END */
+
+/* BTPB TEXT OVERFLOW AUDIT V1 START */
+
+/* -----------------------------------------------------------------------
+   GLOBAL TEAM LABEL SAFETY
+   No team name should disappear because TeamLabel is nested in a fixed grid.
+   ----------------------------------------------------------------------- */
+
+.team-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* -----------------------------------------------------------------------
+   PLAYER HEADER / HOME
+   ----------------------------------------------------------------------- */
+
+.app-shell .app-header {
+  height: auto;
+  min-height: 72px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.app-shell .app-header > div:nth-child(2) {
+  min-width: 0;
+}
+
+.app-shell .app-header > div:nth-child(2) strong,
+.app-shell .app-header > div:nth-child(2) span {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
+.app-shell .team-hero h1 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .team-hero h1 .team-label {
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.app-shell .versus {
+  min-width: 0;
+}
+
+.app-shell .versus > strong {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-shell .versus > strong .team-label {
+  max-width: 100%;
+}
+
+.app-shell .versus > strong .team-label-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* -----------------------------------------------------------------------
+   PLAYER > PARTITE > CAMPI
+   Cards grow if a name needs more room instead of clipping the letters.
+   ----------------------------------------------------------------------- */
+
+.app-shell .player-live-fields {
+  align-items: stretch;
+}
+
+.app-shell .player-live-field {
+  min-width: 0;
+  height: auto;
+  overflow: visible !important;
+}
+
+.app-shell .player-live-field-teams {
+  min-width: 0;
+  overflow: visible !important;
+}
+
+.app-shell .player-live-field-teams > strong,
+.app-shell .player-live-field-teams > strong .team-label,
+.app-shell .player-live-field-teams > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.app-shell .player-live-field-teams > strong .team-label-text {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  line-height: 1.08;
+}
+
+/* -----------------------------------------------------------------------
+   PLAYER > LE TUE PARTITE / LISTE PARTITE
+   On phones metadata gets its own line, leaving the full row to team names.
+   ----------------------------------------------------------------------- */
+
+.app-shell .player-match-row {
+  min-width: 0;
+}
+
+.app-shell .player-match-row > strong {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-shell .player-match-row > strong .team-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-shell .player-match-row > strong .team-label-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.08;
+}
+
+@media (max-width: 480px) {
+  .app-shell .player-match-row {
+    grid-template-columns: minmax(0,1fr) 42px minmax(0,1fr) !important;
+    gap: 7px;
+    padding: 14px 0;
+  }
+
+  .app-shell .player-match-row > div:first-child {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 5px 10px;
+    min-width: 0;
+  }
+
+  .app-shell .player-match-row > div:first-child span,
+  .app-shell .player-match-row > div:first-child small {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell .player-match-row > strong {
+    align-self: center;
+    font-size: 13px;
+  }
+
+  .app-shell .player-match-row > strong:last-child .team-label {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .app-shell .player-match-row .team-label-avatar {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* -----------------------------------------------------------------------
+   PLAYER > GIRONI
+   The old table was 610px wide and required horizontal scrolling.
+   It is now genuinely responsive: all headers remain visible at once.
+   ----------------------------------------------------------------------- */
+
+.app-shell .group-card-v2 {
+  min-width: 0;
+}
+
+.app-shell .group-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: visible !important;
+}
+
+.app-shell .group-table-wide {
+  width: 100%;
+  min-width: 0 !important;
+}
+
+.app-shell .group-wide-row {
+  width: 100%;
+  min-width: 0;
+  grid-template-columns:
+    22px
+    minmax(0,1fr)
+    30px
+    28px
+    52px
+    30px !important;
+  gap: 3px !important;
+  padding: 11px 2px !important;
+}
+
+.app-shell .group-wide-row.header {
+  position: static !important;
+  font-size: 8px;
+  line-height: 1.05;
+}
+
+.app-shell .group-wide-row.header > * {
+  min-width: 0;
+  max-width: 100%;
+  position: static !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal;
+  text-align: center;
+}
+
+.app-shell .group-wide-row.header > strong {
+  text-align: left;
+}
+
+.app-shell .group-wide-row > strong {
+  position: static !important;
+  left: auto !important;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-shell .group-wide-row > strong .team-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-shell .group-wide-row > strong .team-label-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.05;
+}
+
+.app-shell .group-wide-row > span {
+  min-width: 0;
+  text-align: center;
+}
+
+@media (max-width: 380px) {
+  .app-shell .group-wide-row {
+    grid-template-columns:
+      20px
+      minmax(0,1fr)
+      27px
+      25px
+      47px
+      27px !important;
+    gap: 2px !important;
+    font-size: 11px;
+  }
+
+  .app-shell .group-wide-row.header {
+    font-size: 7px;
+  }
+
+  .app-shell .group-wide-row .team-label-avatar {
+    width: 21px;
+    height: 21px;
+  }
+}
+
+@media (min-width: 520px) {
+  .app-shell .group-wide-row {
+    grid-template-columns:
+      30px
+      minmax(150px,1fr)
+      42px
+      38px
+      76px
+      42px !important;
+    gap: 7px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+
+  .app-shell .group-wide-row.header {
+    font-size: 9px;
+  }
+}
+
+/* Long group names / descriptions must wrap rather than leave the card. */
+.app-shell .group-card-heading {
+  min-width: 0;
+  gap: 10px;
+}
+
+.app-shell .group-card-heading > div {
+  min-width: 0;
+}
+
+.app-shell .group-card-heading h2,
+.app-shell .group-card-heading span {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* -----------------------------------------------------------------------
+   PLAYER MATCH SCREEN / SCORE ENTRY
+   ----------------------------------------------------------------------- */
+
+.match-screen .match-team-names {
+  min-width: 0;
+}
+
+.match-screen .match-team-names > strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.match-screen .match-team-names > strong .team-label {
+  max-width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.match-screen .match-team-names > strong .team-label-text,
+.match-screen .score-inputs .team-label-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.match-screen .score-inputs label {
+  min-width: 0;
+}
+
+/* -----------------------------------------------------------------------
+   TEAM PICKER
+   It used to silently ellipsize long names.
+   ----------------------------------------------------------------------- */
+
+.team-search-option {
+  min-width: 0;
+}
+
+.team-search-option > span,
+.team-search-option-name,
+.team-search-option-name > span {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+}
+
+/* -----------------------------------------------------------------------
+   KNOCKOUT
+   Allow names to wrap rather than truncate with ellipsis.
+   ----------------------------------------------------------------------- */
+
+.bracket-team {
+  min-width: 0;
+  align-items: center;
+}
+
+.bracket-team strong {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+  line-height: 1.08;
+}
+
+.bracket-team .team-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.bracket-team .team-label-text {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+/* -----------------------------------------------------------------------
+   ADMIN: remove silent text truncation where there is room to wrap.
+   ----------------------------------------------------------------------- */
+
+.group-import-preview strong,
+.group-import-preview small,
+.admin-title-block .eyebrow {
+  max-width: 100%;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+}
+
+/* BTPB TEXT OVERFLOW AUDIT V1 END */
