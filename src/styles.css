@@ -3603,3 +3603,119 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB AVATAR SIZE V3 END */
+
+/* BTPB PLAYER FIELD TIMER + HOME AVATAR V1 START */
+
+/* HOME: team avatar clearly visible beside the team name. */
+.app-shell .team-hero h1 .team-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+}
+
+.app-shell .team-hero h1 .team-label-avatar {
+  width: clamp(38px, 11vw, 48px);
+  height: clamp(38px, 11vw, 48px);
+  flex: 0 0 auto;
+}
+
+.app-shell .team-hero h1 .team-label-text {
+  min-width: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
+
+/* PARTITE > CAMPI
+   Layout mirrors the TV concept: field name, matchup, then PRONTA/timer. */
+.app-shell .player-live-field {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-height: 168px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.app-shell .player-live-field > span {
+  align-self: start;
+}
+
+.app-shell .player-live-field-teams {
+  min-width: 0;
+  align-self: center;
+  display: grid;
+  gap: 4px;
+}
+
+.app-shell .player-live-field-teams > strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.app-shell .player-live-field-teams > strong .team-label {
+  max-width: 100%;
+}
+
+.app-shell .player-live-field-teams > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .player-live-field-teams > small {
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  opacity: .62;
+}
+
+.app-shell .player-live-field-teams .team-label-avatar {
+  width: 30px;
+  height: 30px;
+}
+
+/* White status/timer pill at the bottom, like the TV. */
+.app-shell .player-live-field-clock {
+  justify-self: end;
+  align-self: end;
+  min-width: 92px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 11px;
+  border: 1px solid rgba(24,40,58,.10);
+  border-radius: 13px;
+  background: rgba(255,255,255,.82);
+  color: #18283a;
+  box-shadow: 0 2px 7px rgba(24,40,58,.05);
+  font-size: clamp(17px, 5vw, 23px);
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: -.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Compact phones: keep the timer readable without forcing card overlap. */
+@media (max-width: 390px) {
+  .app-shell .player-live-field {
+    min-height: 158px;
+    gap: 8px;
+  }
+
+  .app-shell .player-live-field-teams .team-label-avatar {
+    width: 27px;
+    height: 27px;
+  }
+
+  .app-shell .player-live-field-clock {
+    min-width: 84px;
+    padding: 7px 9px;
+    font-size: 17px;
+  }
+}
+
+/* BTPB PLAYER FIELD TIMER + HOME AVATAR V1 END */

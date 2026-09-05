@@ -298,7 +298,7 @@ function PlayerHome({ bundle, teamId }: { bundle: TournamentBundle; teamId: stri
   }
 
   return <>
-    <section className="team-hero"><span>LA TUA SQUADRA</span><h1>{team.name}</h1>{groupName && <div><small>{groupName}</small></div>}</section>
+    <section className="team-hero"><span>LA TUA SQUADRA</span><h1><TeamLabel bundle={bundle} teamId={teamId} name={team.name} /></h1>{groupName && <div><small>{groupName}</small></div>}</section>
     {nextCard}
     <section className="player-stats"><div><strong>{playedCount}</strong><span>Giocate</span></div><div><strong>{remainingCount}</strong><span>Da giocare</span></div><div><strong>{points}</strong><span>Punti</span></div><div><strong>{position ? `#${position}` : '–'}</strong><span>Posizione</span></div></section>
     <NotificationControls tournamentId={bundle.tournament.id} />
@@ -372,7 +372,30 @@ function GroupsView({ bundle, highlightTeamId }: { bundle: TournamentBundle; hig
 function AllMatchesView({ bundle }: { bundle: TournamentBundle }) {
   const [mode, setMode] = useState<'past'|'future'>('future');
   const [query, setQuery] = useState('');
+  const [, setFieldTick] = useState(Date.now());
   const liveStatuses: MatchRow['status'][] = ['called','ready','playing','awaiting_result'];
+
+  useEffect(() => {
+    const id = window.setInterval(() => setFieldTick(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, []);
+
+  function liveFieldClock(match: MatchRow) {
+    if (match.status === 'called' || match.status === 'ready') return 'PRONTA';
+
+    if (match.status === 'playing') {
+      const countdown = countdownRemaining(match.started_at);
+      if (countdown > 0) return 'PRONTA';
+      if (match.duration_seconds == null) return 'IN CORSO';
+      return formatClock(secondsRemaining(match));
+    }
+
+    if (match.status === 'awaiting_result') {
+      return match.duration_seconds == null ? 'IN CORSO' : '00:00';
+    }
+
+    return '';
+  }
   const activeFields = bundle.fields.filter((f) => f.is_active).sort((a,b) => a.sort_order-b.sort_order);
   const normalized = normalizeTextSearch(query);
   const past = bundle.matches.filter((m) => ['finished','forfeit'].includes(m.status)).sort((a,b) => (Date.parse(b.ended_at ?? '') || 0) - (Date.parse(a.ended_at ?? '') || 0) || matchOrder(b,a));
@@ -380,7 +403,7 @@ function AllMatchesView({ bundle }: { bundle: TournamentBundle }) {
   const source = mode === 'past' ? past : future;
   const filtered = source.filter((m) => !normalized || normalizeTextSearch(`${teamName(bundle,m.team1_id)} ${teamName(bundle,m.team2_id)} ${matchStageLabel(bundle,m)}`).includes(normalized));
   return <div className="matches-page-v2">
-    <section className="live-fields-section"><div className="section-heading-v2"><div><span>LIVE</span><h2>Campi</h2></div><small>{activeFields.length} attivi</small></div><div className="player-live-fields">{activeFields.map((field) => { const match = bundle.matches.find((m) => m.field_id === field.id && liveStatuses.includes(m.status)); return <article className={match ? 'player-live-field active' : 'player-live-field'} key={field.id}><span>{field.name}</span>{match ? <><strong><TeamLabel bundle={bundle} teamId={match.team1_id} /></strong><small>VS</small><strong><TeamLabel bundle={bundle} teamId={match.team2_id} /></strong>{!['awaiting_result','called'].includes(match.status) && <em>{statusLabel(match.status)}</em>}</> : <div className="field-free-player">LIBERO</div>}</article>; })}</div></section>
+    <section className="live-fields-section"><div className="section-heading-v2"><div><span>LIVE</span><h2>Campi</h2></div><small>{activeFields.length} attivi</small></div><div className="player-live-fields">{activeFields.map((field) => { const match = bundle.matches.find((m) => m.field_id === field.id && liveStatuses.includes(m.status)); return <article className={match ? 'player-live-field active' : 'player-live-field'} key={field.id}><span>{field.name}</span>{match ? <><div className="player-live-field-teams"><strong><TeamLabel bundle={bundle} teamId={match.team1_id} /></strong><small>VS</small><strong><TeamLabel bundle={bundle} teamId={match.team2_id} /></strong></div><div className="player-live-field-clock">{liveFieldClock(match)}</div></> : <div className="field-free-player">LIBERO</div>}</article>; })}</div></section>
     <section className="panel all-matches-panel"><div className="matches-toolbar"><div className="segmented-control"><button className={mode === 'past' ? 'active' : ''} onClick={() => setMode('past')}>Passate</button><button className={mode === 'future' ? 'active' : ''} onClick={() => setMode('future')}>Future</button></div><div className="match-search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cerca squadra o girone" /></div></div><div className="player-match-list global">{filtered.length === 0 && <div className="empty-state">Nessuna partita trovata.</div>}{filtered.map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div></section>
   </div>;
 }
