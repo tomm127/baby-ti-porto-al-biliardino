@@ -1595,7 +1595,7 @@ button:disabled { cursor:not-allowed; }
   overflow-wrap: anywhere;
 }
 
-.match-screen .match-team-names span {
+.match-screen .match-team-names > span {
   color: #8b7650;
   opacity: 1;
   font-size: 13px;
@@ -3462,3 +3462,49 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB TEAM AVATARS V1 END */
+
+/* BTPB TEAM AVATAR SIZE + LABEL SAFETY V1 START */
+
+/* Slightly larger avatars everywhere, without changing the surrounding layout. */
+.team-label-avatar {
+  width: clamp(20px, .98em, 34px);
+  height: clamp(20px, .98em, 34px);
+}
+
+.team-search-option-name img {
+  width: 30px;
+  height: 30px;
+}
+
+.match-team-names .team-label-avatar {
+  width: clamp(26px, .82em, 36px);
+  height: clamp(26px, .82em, 36px);
+}
+
+.tv-v2 .team-label-avatar {
+  width: clamp(23px, .84em, 35px);
+  height: clamp(23px, .84em, 35px);
+}
+
+.bracket-team .team-label-avatar {
+  width: 20px;
+  height: 20px;
+}
+
+/* Player match title: nested TeamLabel spans keep the team-name typography. */
+.match-screen .match-team-names > strong .team-label {
+  max-width: 100%;
+  color: var(--m-ink) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.match-screen .match-team-names > strong .team-label-text {
+  min-width: 0;
+  color: var(--m-ink) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* BTPB TEAM AVATAR SIZE + LABEL SAFETY V1 END */

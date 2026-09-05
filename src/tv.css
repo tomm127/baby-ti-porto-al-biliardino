@@ -147,7 +147,7 @@
   overflow-wrap: anywhere;
 }
 
-.tv-v2 .tv-field-teams span {
+.tv-v2 .tv-field-teams > span {
   color: #8f8d84 !important;
   font-size: clamp(12px, .76vw, 15px);
   font-weight: 950;
@@ -1221,3 +1221,42 @@
 }
 
 /* BTPB TV FIXED 10 QUEUE ROWS V1 END */
+
+/* BTPB TV TEAM LABEL FIX V1 START */
+
+/* TeamLabel must inherit the large field-team typography, not the VS style. */
+.tv-v2 .tv-field-teams > strong .team-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .34em;
+  max-width: 100%;
+  color: var(--tv-ink) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.tv-v2 .tv-field-teams > strong .team-label-text {
+  min-width: 0;
+  color: var(--tv-ink) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* Same protection for the fixed queue. */
+.tv-v2 .tv-fixed-queue-match > strong .team-label {
+  max-width: 100%;
+  color: var(--tv-ink) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong .team-label-text {
+  min-width: 0;
+  color: var(--tv-ink) !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* BTPB TV TEAM LABEL FIX V1 END */
