@@ -3508,3 +3508,56 @@ button:disabled { cursor:not-allowed; }
 }
 
 /* BTPB TEAM AVATAR SIZE + LABEL SAFETY V1 END */
+
+/* BTPB AVATAR SIZE V2 START */
+
+/* Generic team avatar: clearly visible, still subordinate to the name. */
+.team-label-avatar {
+  width: clamp(24px, 1.08em, 40px);
+  height: clamp(24px, 1.08em, 40px);
+  flex: 0 0 auto;
+}
+
+/* Team picker */
+.team-search-option-name img {
+  width: 34px;
+  height: 34px;
+}
+
+/* Player match screen */
+.match-team-names .team-label-avatar {
+  width: clamp(30px, .92em, 44px);
+  height: clamp(30px, .92em, 44px);
+}
+
+/* TV: noticeably larger than before. */
+.tv-v2 .team-label-avatar {
+  width: clamp(30px, .95em, 44px);
+  height: clamp(30px, .95em, 44px);
+  flex: 0 0 auto;
+}
+
+/* Queue rows use slightly smaller avatars than the large live-field cards
+   so all 10 rows remain perfectly separated. */
+.tv-v2 .tv-fixed-queue-match .team-label-avatar {
+  width: clamp(25px, 1.32vw, 31px);
+  height: clamp(25px, 1.32vw, 31px);
+}
+
+/* Knockout */
+.bracket-team .team-label-avatar {
+  width: 24px;
+  height: 24px;
+}
+
+/* Keep text from ever pushing an avatar or another element over its neighbor. */
+.team-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.team-label-text {
+  min-width: 0;
+}
+
+/* BTPB AVATAR SIZE V2 END */

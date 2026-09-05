@@ -1260,3 +1260,182 @@
 }
 
 /* BTPB TV TEAM LABEL FIX V1 END */
+
+/* BTPB TV BIGGER TYPE V2 START */
+
+/*
+ * Bigger TV typography, but names are constrained inside their own boxes:
+ * - field names may wrap naturally
+ * - queue names stay on one line and ellipsize instead of overlapping
+ * - avatars are fixed-size flex items
+ */
+
+/* Header */
+.tv-v2 .tv-brand-block h1 {
+  font-size: clamp(34px, 2.75vw, 52px);
+  line-height: 1;
+}
+
+/* Field cards */
+.tv-v2 .tv-field {
+  padding: clamp(17px, 1.15vw, 23px);
+  row-gap: clamp(4px, .45vh, 8px);
+}
+
+.tv-v2 .tv-field-name {
+  font-size: clamp(21px, 1.38vw, 28px);
+  line-height: 1;
+}
+
+.tv-v2 .tv-field-teams {
+  gap: clamp(6px, .55vh, 10px);
+  padding: clamp(10px, 1vh, 15px) 0;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-field-teams > strong {
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(35px, 2.62vw, 52px);
+  line-height: 1.04;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-field-teams > strong .team-label {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: .34em;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-field-teams > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.04;
+}
+
+.tv-v2 .tv-field-teams > span {
+  font-size: clamp(14px, .86vw, 18px);
+  line-height: 1;
+}
+
+.tv-v2 .tv-field-clock {
+  min-width: 190px;
+  padding: 13px 20px;
+  font-size: clamp(36px, 3vw, 58px);
+}
+
+.tv-v2 .tv-free {
+  font-size: clamp(34px, 2.4vw, 48px);
+}
+
+/* Main queue title */
+.tv-v2 .tv-section-title > span {
+  font-size: clamp(21px, 1.38vw, 28px);
+}
+
+.tv-v2 .tv-section-title > strong {
+  font-size: clamp(15px, .95vw, 19px);
+}
+
+/* Fixed ten-row queue */
+.tv-v2 .tv-fixed-queue-row {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-number {
+  font-size: clamp(17px, 1.05vw, 22px);
+}
+
+.tv-v2 .tv-fixed-queue-content {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-meta strong {
+  font-size: clamp(15px, .94vw, 19px);
+  line-height: 1;
+}
+
+.tv-v2 .tv-fixed-queue-meta small {
+  font-size: clamp(15px, .94vw, 19px);
+  line-height: 1.02;
+}
+
+.tv-v2 .tv-fixed-queue-match {
+  min-width: 0;
+  gap: clamp(8px, .55vw, 12px);
+  font-size: clamp(22px, 1.48vw, 31px);
+  line-height: 1;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong .team-label {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.tv-v2 .tv-fixed-queue-match > strong .team-label-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-v2 .tv-fixed-queue-match > em {
+  flex: none;
+  font-size: .64em;
+}
+
+/* Footer: a little more readable from a distance */
+.tv-v2 .tv-footer-brand strong {
+  font-size: clamp(22px, 1.4vw, 29px);
+}
+
+.tv-v2 .tv-footer-brand span,
+.tv-v2 .tv-qr-copy span {
+  font-size: clamp(13px, .82vw, 17px);
+}
+
+.tv-v2 .tv-qr-copy > strong {
+  font-size: clamp(21px, 1.32vw, 27px);
+}
+
+/* Slightly reduce only on shorter displays so the 10-row queue never collides. */
+@media (max-height: 760px) {
+  .tv-v2 .tv-field-teams > strong {
+    font-size: clamp(31px, 2.35vw, 46px);
+  }
+
+  .tv-v2 .tv-fixed-queue-match {
+    font-size: clamp(20px, 1.3vw, 27px);
+  }
+
+  .tv-v2 .tv-fixed-queue-meta strong,
+  .tv-v2 .tv-fixed-queue-meta small {
+    font-size: clamp(13px, .82vw, 17px);
+  }
+}
+
+/* BTPB TV BIGGER TYPE V2 END */
