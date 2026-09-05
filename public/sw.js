@@ -1,5 +1,5 @@
-const CACHE = 'baby-biliardino-shell-v7';
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png', '/sounds/btpb-alert.wav'];
+const CACHE = 'baby-biliardino-shell-v8';
+const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png', '/sounds/race-start-beeps-125125.mp3', '/sounds/boxing-bell-1-232450.mp3', '/sounds/new-notification-09-352705.mp3'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));

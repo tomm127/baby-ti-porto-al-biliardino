@@ -1,18 +1,24 @@
-let alertAudio: HTMLAudioElement | null = null;
+type SoundKey = 'race' | 'bell' | 'notification';
+
+const SOUND_URLS: Record<SoundKey, string> = {
+  race: '/sounds/race-start-beeps-125125.mp3',
+  bell: '/sounds/boxing-bell-1-232450.mp3',
+  notification: '/sounds/new-notification-09-352705.mp3',
+};
+
 let gameAudioContext: AudioContext | null = null;
+let unlockListenersInstalled = false;
+
+const buffers = new Map<SoundKey, AudioBuffer>();
+const loadingBuffers = new Map<SoundKey, Promise<AudioBuffer | null>>();
+
+let raceSource: AudioBufferSourceNode | null = null;
+let racePlayingUntil = 0;
+let bellSource: AudioBufferSourceNode | null = null;
 
 type SafariAudioWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
-
-function getAlertAudio() {
-  if (!alertAudio) {
-    alertAudio = new Audio('/sounds/btpb-alert.wav');
-    alertAudio.preload = 'auto';
-    alertAudio.volume = 1;
-  }
-  return alertAudio;
-}
 
 function getGameAudioContext() {
   if (gameAudioContext) return gameAudioContext;
@@ -27,59 +33,19 @@ function getGameAudioContext() {
   return gameAudioContext;
 }
 
-function scheduleTone(
-  ctx: AudioContext,
-  frequency: number,
-  startAt: number,
-  duration: number,
-  volume: number,
-  type: OscillatorType = 'sine',
-) {
+function scheduleSilentUnlockTone(ctx: AudioContext) {
   const oscillator = ctx.createOscillator();
   const gain = ctx.createGain();
+  const now = ctx.currentTime + 0.005;
 
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(frequency, startAt);
-
-  gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), startAt + 0.018);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+  oscillator.frequency.setValueAtTime(440, now);
+  gain.gain.setValueAtTime(0.00001, now);
+  gain.gain.setValueAtTime(0.00001, now + 0.025);
 
   oscillator.connect(gain);
   gain.connect(ctx.destination);
-
-  oscillator.start(startAt);
-  oscillator.stop(startAt + duration + 0.02);
-}
-
-function scheduleSweep(
-  ctx: AudioContext,
-  fromFrequency: number,
-  toFrequency: number,
-  startAt: number,
-  duration: number,
-  volume: number,
-  type: OscillatorType = 'triangle',
-) {
-  const oscillator = ctx.createOscillator();
-  const gain = ctx.createGain();
-
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(fromFrequency, startAt);
-  oscillator.frequency.exponentialRampToValueAtTime(
-    Math.max(1, toFrequency),
-    startAt + duration,
-  );
-
-  gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), startAt + 0.025);
-  gain.gain.setValueAtTime(Math.max(0.0002, volume), startAt + Math.max(0.03, duration - 0.12));
-  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-
-  oscillator.connect(gain);
-  gain.connect(ctx.destination);
-  oscillator.start(startAt);
-  oscillator.stop(startAt + duration + 0.03);
+  oscillator.start(now);
+  oscillator.stop(now + 0.03);
 }
 
 async function runningGameAudioContext() {
@@ -95,36 +61,116 @@ async function runningGameAudioContext() {
   return ctx.state === 'running' ? ctx : null;
 }
 
-/**
- * Run this during real user gestures. Once unlocked, countdown/end sounds are
- * produced by Web Audio and therefore use the phone's media-audio path rather
- * than depending on the notification sound channel.
- */
-export async function unlockBtpbGameAudio() {
-  const ctx = await runningGameAudioContext();
-  if (!ctx) return false;
+async function loadSoundBuffer(key: SoundKey) {
+  const existing = buffers.get(key);
+  if (existing) return existing;
 
-  // A practically silent, extremely short tone helps Safari/iOS establish
-  // the audio session while we are still inside a user gesture.
-  const now = ctx.currentTime + 0.005;
-  scheduleTone(ctx, 440, now, 0.025, 0.0002);
-  return true;
+  const loading = loadingBuffers.get(key);
+  if (loading) return loading;
+
+  const promise = (async () => {
+    const ctx = getGameAudioContext();
+    if (!ctx) return null;
+
+    try {
+      const response = await fetch(SOUND_URLS[key], { cache: 'force-cache' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const encoded = await response.arrayBuffer();
+      const decoded = await ctx.decodeAudioData(encoded.slice(0));
+      buffers.set(key, decoded);
+      return decoded;
+    } catch (error) {
+      console.warn(`BTPB: non riesco a caricare il suono ${key}`, error);
+      return null;
+    } finally {
+      loadingBuffers.delete(key);
+    }
+  })();
+
+  loadingBuffers.set(key, promise);
+  return promise;
 }
 
-export function installBtpbGameAudioUnlock() {
+async function playBuffer(
+  key: SoundKey,
+  offsetSeconds = 0,
+  volume = 1,
+) {
+  const ctx = await runningGameAudioContext();
+  if (!ctx) return null;
+
+  const buffer = await loadSoundBuffer(key);
+  if (!buffer) return null;
+
+  const source = ctx.createBufferSource();
+  const gain = ctx.createGain();
+
+  source.buffer = buffer;
+  gain.gain.value = Math.max(0, Math.min(1, volume));
+
+  source.connect(gain);
+  gain.connect(ctx.destination);
+
+  const safeOffset = Math.max(
+    0,
+    Math.min(offsetSeconds, Math.max(0, buffer.duration - 0.03)),
+  );
+
+  source.start(0, safeOffset);
+  return { ctx, source, buffer, safeOffset };
+}
+
+function installGlobalAudioUnlock() {
+  if (unlockListenersInstalled) return;
+  unlockListenersInstalled = true;
+
   const unlock = () => {
     void unlockBtpbGameAudio();
   };
 
-  // Keep these listeners installed: if a phone suspends audio after backgrounding,
-  // the next interaction will resume the same audio context.
+  // Keep listeners active. iOS can suspend audio after the PWA backgrounds;
+  // the next user interaction resumes the same media audio session.
   window.addEventListener('pointerdown', unlock, { passive: true, capture: true });
   window.addEventListener('touchend', unlock, { passive: true, capture: true });
 }
 
 /**
- * Player match countdown only.
- * 3 and 2 = short beep; 1 = higher/longer start beep.
+ * Unlock the media audio path on iOS/Android and preload all three real sounds.
+ */
+export async function unlockBtpbGameAudio() {
+  const ctx = await runningGameAudioContext();
+  if (!ctx) return false;
+
+  scheduleSilentUnlockTone(ctx);
+
+  void Promise.all([
+    loadSoundBuffer('race'),
+    loadSoundBuffer('bell'),
+    loadSoundBuffer('notification'),
+  ]);
+
+  return true;
+}
+
+export function installBtpbGameAudioUnlock() {
+  installGlobalAudioUnlock();
+}
+
+/**
+ * Real Pixabay "Race Start Beeps".
+ *
+ * The file contains 4 tones: three 450 Hz countdown tones and a final
+ * higher 900 Hz GO tone. BTPB's server countdown is 3 seconds, so:
+ *
+ *   t=0  -> UI 3 + first low beep
+ *   t=1  -> UI 2 + second low beep
+ *   t=2  -> UI 1 + third low beep
+ *   t=3  -> timer starts + high GO beep
+ *
+ * PlayerPage still calls this function for 3, 2 and 1. We start the complete
+ * file once. If a phone joins the countdown late, it seeks forward so the
+ * final high beep remains aligned as closely as possible with timer start.
  */
 export async function playBtpbCountdownBeep(step: number) {
   if (step < 1 || step > 3) return false;
@@ -132,83 +178,79 @@ export async function playBtpbCountdownBeep(step: number) {
   const ctx = await runningGameAudioContext();
   if (!ctx) return false;
 
-  const now = ctx.currentTime + 0.01;
-
-  if (step === 3) {
-    scheduleSweep(ctx, 720, 880, now, 0.22, 0.25, 'sine');
-    scheduleTone(ctx, 1440, now, 0.15, 0.055, 'sine');
-  } else if (step === 2) {
-    scheduleSweep(ctx, 820, 1020, now, 0.24, 0.28, 'sine');
-    scheduleTone(ctx, 1640, now, 0.16, 0.06, 'sine');
-  } else {
-    scheduleSweep(ctx, 760, 1520, now, 0.92, 0.40, 'triangle');
-    scheduleSweep(ctx, 1520, 2280, now, 0.92, 0.095, 'sine');
-    scheduleTone(ctx, 3040, now + 0.10, 0.58, 0.035, 'sine');
+  // If the full race sequence is already running, do not restart it at 2 or 1.
+  if (step !== 3 && raceSource && racePlayingUntil > ctx.currentTime + 0.05) {
+    return true;
   }
+
+  if (step === 3 && raceSource) {
+    try { raceSource.stop(); } catch { /* already ended */ }
+    raceSource = null;
+    racePlayingUntil = 0;
+  }
+
+  // If this phone first notices the match at 2 or 1, catch up in the source.
+  const offset = step === 3 ? 0 : step === 2 ? 1 : 2;
+  const played = await playBuffer('race', offset, 0.96);
+  if (!played) return false;
+
+  raceSource = played.source;
+  racePlayingUntil =
+    played.ctx.currentTime + Math.max(0, played.buffer.duration - played.safeOffset);
+
+  const ownSource = played.source;
+  played.source.onended = () => {
+    if (raceSource === ownSource) {
+      raceSource = null;
+      racePlayingUntil = 0;
+    }
+  };
 
   return true;
 }
 
 /**
- * Strong end-of-match multimedia alarm, used only while the player match page
- * is active. Deliberately distinct from the 3-2-1 countdown.
+ * Real "Boxing Bell 1" for the end of the match.
  */
 export async function playBtpbTimerEndAlarm() {
-  const ctx = await runningGameAudioContext();
-  if (!ctx) return false;
+  if (raceSource) {
+    try { raceSource.stop(); } catch { /* already ended */ }
+    raceSource = null;
+    racePlayingUntil = 0;
+  }
 
-  const base = ctx.currentTime + 0.015;
+  if (bellSource) {
+    try { bellSource.stop(); } catch { /* already ended */ }
+    bellSource = null;
+  }
 
-  scheduleSweep(ctx, 1320, 1120, base, 0.34, 0.37, 'triangle');
-  scheduleTone(ctx, 2640, base, 0.24, 0.055, 'sine');
+  const played = await playBuffer('bell', 0, 1);
+  if (!played) return false;
 
-  scheduleSweep(ctx, 1380, 1160, base + 0.48, 0.34, 0.38, 'triangle');
-  scheduleTone(ctx, 2760, base + 0.48, 0.24, 0.055, 'sine');
-
-  scheduleSweep(ctx, 1520, 720, base + 0.98, 1.55, 0.43, 'sawtooth');
-  scheduleSweep(ctx, 3040, 1440, base + 0.98, 1.55, 0.055, 'sine');
+  bellSource = played.source;
+  const ownSource = played.source;
+  played.source.onended = () => {
+    if (bellSource === ownSource) bellSource = null;
+  };
 
   return true;
 }
 
 /**
- * Existing HTML media sound, retained for foreground push alerts.
+ * Foreground push alert: real "New Notification 09".
  */
 export async function primeBtpbAlertSound() {
-  const audio = getAlertAudio();
-
-  try {
-    audio.currentTime = 0;
-    audio.muted = true;
-    await audio.play();
-    audio.pause();
-    audio.currentTime = 0;
-    audio.muted = false;
-  } catch {
-    audio.muted = false;
-  }
+  const unlocked = await unlockBtpbGameAudio();
+  if (!unlocked) return false;
+  await loadSoundBuffer('notification');
+  return true;
 }
 
 export async function playBtpbAlertSound() {
-  const audio = getAlertAudio();
-
-  try {
-    audio.pause();
-    audio.currentTime = 0;
-    audio.muted = false;
-    audio.volume = 1;
-    await audio.play();
-    return true;
-  } catch {
-    return false;
-  }
+  const played = await playBuffer('notification', 0, 1);
+  return Boolean(played);
 }
 
 export function installBtpbAlertSoundUnlock() {
-  const unlock = () => {
-    void primeBtpbAlertSound();
-  };
-
-  window.addEventListener('pointerdown', unlock, { once: true, passive: true });
-  window.addEventListener('touchend', unlock, { once: true, passive: true });
+  installGlobalAudioUnlock();
 }
