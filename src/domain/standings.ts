@@ -151,6 +151,8 @@ export function qualifyFromGroups(
   }
 
   return qualifiers.sort((a, b) =>
+    // SQL uses NULLS LAST for ratios when played = 0.
+    Number(a.played === 0) - Number(b.played === 0) ||
     b.pointsPerGame - a.pointsPerGame ||
     b.goalDifferencePerGame - a.goalDifferencePerGame ||
     b.goalsForPerGame - a.goalsForPerGame ||

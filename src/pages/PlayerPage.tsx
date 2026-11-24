@@ -1,6 +1,7 @@
 import { btpbText, useBtpbUiLanguage, btpbError } from '../lib/btpbUiText.ts';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { calculateStandings, matchesAheadForTeam, type PlayedMatch, type Team as EngineTeam } from '../domain/index.ts';
+import { matchesAheadForTeam } from '../domain/index.ts';
+import { rankSnapshotGroup } from '../domain/snapshotStandings.ts';
 import {
   claimTeam,
   endMatchEarly,
@@ -259,12 +260,9 @@ function PlayerHome({ bundle, teamId }: { bundle: TournamentBundle; teamId: stri
   if (membership) {
     const group = bundle.groups.find((g) => g.id === membership.group_id);
     groupName = group?.name ?? '';
-    const memberships = bundle.groupTeams.filter((gt) => gt.group_id === membership.group_id);
-    const teams: EngineTeam[] = memberships.map((gt) => ({ id: gt.team_id, name: teamName(bundle, gt.team_id), lotOrder: gt.lot_order }));
-    const played: PlayedMatch[] = bundle.matches
-      .filter((m) => m.group_id === membership.group_id && ['finished','forfeit'].includes(m.status) && m.team1_id && m.team2_id && m.score_team1 != null && m.score_team2 != null)
-      .map((m) => ({ id:m.id, groupId:membership.group_id, team1Id:m.team1_id!, team2Id:m.team2_id!, scoreTeam1:m.score_team1!, scoreTeam2:m.score_team2! }));
-    const standings = calculateStandings(teams, played);
+    const standings = rankSnapshotGroup(bundle, membership.group_id);
+    // Retired teams retain their historical points, but no qualification position.
+    points = bundle.standings.find(r => r.group_id === membership.group_id && r.team_id === teamId)?.points ?? 0;
     const rowIndex = standings.findIndex((row) => row.teamId === teamId);
     if (rowIndex >= 0) {
       position = rowIndex + 1;
@@ -358,14 +356,11 @@ function NotificationControls({ tournamentId }: { tournamentId: string }) {
 function GroupsView({ bundle, highlightTeamId }: { bundle: TournamentBundle; highlightTeamId?: string }) {
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   return <div className="group-stack">{bundle.groups.map((group) => {
-    const memberships = bundle.groupTeams.filter((gt) => gt.group_id === group.id);
-    const teams: EngineTeam[] = memberships.map((gt) => ({ id: gt.team_id, name: teamName(bundle, gt.team_id), lotOrder: gt.lot_order }));
-    const groupMatches = bundle.matches.filter((m) => m.group_id === group.id && m.status !== 'cancelled');
-    const played: PlayedMatch[] = groupMatches.filter((m) => ['finished','forfeit'].includes(m.status) && m.team1_id && m.team2_id && m.score_team1 != null && m.score_team2 != null).map((m) => ({ id:m.id, groupId:group.id, team1Id:m.team1_id!, team2Id:m.team2_id!, scoreTeam1:m.score_team1!, scoreTeam2:m.score_team2! }));
-    const rows = calculateStandings(teams, played);
+    const groupMatches = bundle.matches.filter((m) => m.group_id === group.id && m.stage === 'group' && m.status !== 'cancelled');
+    const rows = rankSnapshotGroup(bundle, group.id);
     const open = openGroupId === group.id;
     return <section className="panel group-card-v2" key={group.id}>
-      <button className="group-card-heading" onClick={() => setOpenGroupId(open ? null : group.id)}><div><h2>{group.name}</h2><span>{memberships.length}{btpbText(" squadre")}</span></div><strong>{open ? '−' : '+'}</strong></button>
+      <button className="group-card-heading" onClick={() => setOpenGroupId(open ? null : group.id)}><div><h2>{group.name}</h2><span>{rows.length}{btpbText(" squadre")}</span></div><strong>{open ? '−' : '+'}</strong></button>
       <div className="group-table-scroll"><div className="group-table-wide"><div className="group-wide-row header"><span>#</span><strong>{btpbText("Squadra")}</strong><span>{btpbText("PT")}</span><span>G</span><span>{btpbText("Da giocare")}</span><span>{btpbText("DR")}</span></div>{rows.map((r,i) => { const toPlay = groupMatches.filter((m) => [m.team1_id,m.team2_id].includes(r.teamId) && !['finished','forfeit','cancelled'].includes(m.status)).length; return <div className={r.teamId === highlightTeamId ? 'group-wide-row highlighted' : 'group-wide-row'} key={r.teamId}><span>{i+1}</span><strong><TeamLabel bundle={bundle} teamId={r.teamId} name={r.teamName} /></strong><span>{r.points}</span><span>{r.played}</span><span>{toPlay}</span><span>{signed(r.goalDifference)}</span></div>; })}</div></div>
       {open && <div className="group-match-detail"><h3>{btpbText("Tutte le partite")}</h3>{groupMatches.slice().sort(matchOrder).map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div>}
     </section>;
