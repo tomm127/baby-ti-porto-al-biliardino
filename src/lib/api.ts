@@ -336,8 +336,10 @@ export async function getMyTeamAssignment(tournamentId: string): Promise<string 
 export async function claimTeam(teamId: string, pin?: string) {
   const { data: team, error: teamError } = await client().from('teams').select('tournament_id').eq('id', teamId).single();
   if (teamError) throw teamError;
-  const { error } = await client().rpc('claim_team', { p_team_id: teamId, p_pin: pin || null });
-  if (error) throw error;
+  const { data, error } = await client().rpc('claim_team', { p_team_id: teamId, p_pin: pin || null });
+  if (error) throw new Error(error.message);
+  // Failed or rate-limited PIN checks return null so the server can commit the counters.
+  if (typeof data !== 'string' || !data) throw new Error("Invalid team PIN or too many attempts. If blocked, try again in 5 minutes.");
   cacheAssignment(String(team.tournament_id), teamId);
   await dispatchPushNonFatal();
 }

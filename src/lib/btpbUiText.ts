@@ -473,6 +473,7 @@ const english: Record<string, string> = {
   "Squadra attiva non trovata": "Active team not found",
   "Questa squadra non ha un PIN configurato": "This team has no PIN configured",
   "PIN squadra non valido": "Invalid team PIN",
+  "PIN squadra non valido o troppi tentativi. Se bloccato, riprova tra 5 minuti.": "Invalid team PIN or too many attempts. If blocked, try again in 5 minutes.",
   "Non puoi sostituire il calendario dei gironi dopo l'avvio delle partite": "Cannot replace group schedule after matches have started",
   "Una o più righe del calendario non sono valide per questo torneo": "One or more schedule rows are invalid for this tournament",
   "Genera prima il calendario dei gironi": "Generate the group schedule first",
