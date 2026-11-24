@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { loadTournamentBundleResilient, type MatchRow, type TournamentBundle } from '../lib/api.ts';
 import { countdownRemaining, formatClock, secondsRemaining } from '../lib/time.ts';
 import { useConnectivity } from '../lib/useConnectivity.ts';
+import { useTournamentPolling } from '../lib/useTournamentPolling.ts';
 import { navigate } from '../router.ts';
 import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
@@ -36,11 +37,7 @@ export function ScreenPage({ slug }: { slug: string }) {
 
   const online = useConnectivity(() => void refresh());
   useEffect(() => { void refresh(); }, [refresh]);
-  useEffect(() => {
-    if (!online) return;
-    const id = window.setInterval(() => void refresh(), 3000);
-    return () => window.clearInterval(id);
-  }, [refresh, online]);
+  useTournamentPolling(refresh, online, 3000);
   useEffect(() => {
     const id = window.setInterval(() => setTick(Date.now()), 250);
     return () => window.clearInterval(id);

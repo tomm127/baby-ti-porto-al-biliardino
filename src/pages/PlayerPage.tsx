@@ -22,6 +22,7 @@ import { usePwaInstall } from '../lib/pwaInstall.ts';
 import { navigate } from '../router.ts';
 import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { useConnectivity } from '../lib/useConnectivity.ts';
+import { useTournamentPolling } from '../lib/useTournamentPolling.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 import { TeamLabel } from '../components/TeamLabel.tsx';
 import { LanguagePreferenceRow } from '../components/LanguageSwitch.tsx';
@@ -66,11 +67,7 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
   const online = useConnectivity(() => void refresh());
 
   useEffect(() => { void refresh(); }, [refresh]);
-  useEffect(() => {
-    if (!online) return;
-    const id = window.setInterval(() => void refresh(), 15000);
-    return () => window.clearInterval(id);
-  }, [refresh, online]);
+  useTournamentPolling(refresh, online, 15000);
 
   if (loading) return <CenteredMessage title={btpbText("Caricamento torneo…")} />;
   if (error || !bundle) return <CenteredMessage title={btpbText("Non riesco ad aprire il torneo")} body={btpbError(error)} back />;
@@ -540,7 +537,7 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
     };
   }, []);
   useEffect(() => { const id = window.setInterval(() => setTick(Date.now()), 250); return () => window.clearInterval(id); }, []);
-  useEffect(() => { if (!online) return; const id = window.setInterval(() => void refresh(), 3000); return () => window.clearInterval(id); }, [refresh, online]);
+  useTournamentPolling(refresh, online, 3000, false);
 
   const match = bundle?.matches.find((m) => m.id === matchId);
   const remaining = match ? secondsRemaining(match) : null;

@@ -48,6 +48,7 @@ import { formatClock, secondsRemaining } from '../lib/time.ts';
 import { navigate } from '../router.ts';
 import { KnockoutBracket, QualificationRanking } from '../components/KnockoutBracket.tsx';
 import { useConnectivity } from '../lib/useConnectivity.ts';
+import { useTournamentPolling } from '../lib/useTournamentPolling.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 import { TeamLabel } from '../components/TeamLabel.tsx';
 import { LanguageSwitch } from '../components/LanguageSwitch.tsx';
@@ -135,11 +136,7 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => { refreshList().catch((e) => setError(String(e))).finally(() => setLoading(false)); }, [refreshList]);
   useEffect(() => { if (selectedId) void refreshBundle(selectedId); }, [selectedId, refreshBundle]);
-  useEffect(() => {
-    if (!online || !selectedId || bundle?.tournament.status !== 'active') return;
-    const id = window.setInterval(() => void refreshBundle(selectedId), 3000);
-    return () => window.clearInterval(id);
-  }, [online, selectedId, bundle?.tournament.status, refreshBundle]);
+  useTournamentPolling(refreshBundle, online && Boolean(selectedId) && bundle?.tournament.status === 'active', 3000);
 
   async function logout() {
     await supabase?.auth.signOut();
