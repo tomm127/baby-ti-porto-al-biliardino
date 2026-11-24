@@ -1,4 +1,5 @@
-const CACHE = 'baby-biliardino-shell-v9';
+const CACHE = 'baby-biliardino-shell-v10';
+const LANGUAGE_CACHE = 'btpb-language-preference-v1';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/badge-96.png', '/sounds/race-start-beeps-125125.mp3', '/sounds/boxing-bell-1-232450.mp3', '/sounds/new-notification-09-352705.mp3'];
 
 self.addEventListener('install', (event) => {
@@ -10,7 +11,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
-      caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))),
+      caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE && key !== LANGUAGE_CACHE).map((key) => caches.delete(key)))),
     ]),
   );
 });
@@ -53,7 +54,7 @@ self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data?.text() ?? '' }; }
 
-  const title = data.title || 'BTPB';
+  let title = data.title || 'BTPB';
   const called = data.kind === 'called';
   const options = {
     body: data.body || 'Aggiornamento torneo',
@@ -68,6 +69,18 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil((async () => {
+    let language = 'en';
+    try {
+      const preference = await (await caches.open(LANGUAGE_CACHE)).match(new URL('/__btpb_language__', self.location.origin).href);
+      if (preference && (await preference.text()) === 'it') language = 'it';
+    } catch { /* default to English */ }
+    if (language === 'en') {
+      const titles = { 'È IL VOSTRO TURNO!': "IT'S YOUR TURN!", 'Preparatevi': 'Get ready', 'TEMPO FINITO': "TIME'S UP" };
+      if (Object.prototype.hasOwnProperty.call(titles, title)) title = titles[title];
+      if (options.body === 'Aggiornamento torneo') options.body = 'Tournament update';
+      if (options.body === 'Partita terminata. Inserite il risultato.') options.body = 'Match ended. Enter the result.';
+      options.body = options.body.replace(/^Siete i prossimi: /, 'You are next: ');
+    }
     const clients = await self.clients.matchAll({
       type: 'window',
       includeUncontrolled: true,

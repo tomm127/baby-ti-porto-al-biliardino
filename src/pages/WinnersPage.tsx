@@ -1,46 +1,49 @@
 import { navigate } from '../router.ts';
-
-const placeholders = [
-  { category: 'Campioni', description: 'Vincitori assoluti del torneo' },
-  { category: 'Premio speciale', description: 'Categoria da definire' },
-  { category: 'Miglior coppia', description: 'Categoria da definire' },
-];
+import { useLanguage } from '../lib/i18n.tsx';
+import { LanguageSwitch } from '../components/LanguageSwitch.tsx';
 
 export function WinnersPage() {
+  const { t } = useLanguage();
+  const placeholders = [
+    { id: 'champions', category: t('Champions', 'Campioni'), description: t('Overall tournament winners', 'Vincitori assoluti del torneo') },
+    { id: 'award', category: t('Special award', 'Premio speciale'), description: t('Category to be announced', 'Categoria da definire') },
+    { id: 'pair', category: t('Best pair', 'Miglior coppia'), description: t('Category to be announced', 'Categoria da definire') },
+  ];
   return (
     <main className="page winners-page">
       <section className="winners-shell">
         <header className="winners-header">
-          <button className="winners-back" onClick={() => navigate('/')}>←</button>
+          <button className="winners-back" aria-label={t("Back", "Indietro")} onClick={() => navigate('/')}>←</button>
           <div>
             <span>Baby Ti Porto al Biliardino</span>
-            <h1>Albo vincitori</h1>
+            <h1>{t("Hall of fame", "Albo vincitori")}</h1>
           </div>
+          <div className="winners-language-control"><LanguageSwitch /></div>
         </header>
 
         <div className="winners-intro">
           <img src="/brand/btpb-logo.png" alt="" />
           <div>
-            <strong>La storia del torneo</strong>
-            <p>Qui raccoglieremo vincitori, categorie e foto delle edizioni passate.</p>
+            <strong>{t("Tournament history", "La storia del torneo")}</strong>
+            <p>{t("This page will collect winners, categories and photos from previous editions.", "Qui raccoglieremo vincitori, categorie e foto delle edizioni passate.")}</p>
           </div>
         </div>
 
         <section className="winners-year">
           <div className="winners-year-title">
-            <span>EDIZIONE</span>
-            <h2>Prossimamente</h2>
+            <span>{t("EDITION", "EDIZIONE")}</span>
+            <h2>{t("Coming soon", "Prossimamente")}</h2>
           </div>
 
           <div className="winners-category-grid">
             {placeholders.map((item) => (
-              <article className="winner-placeholder-card" key={item.category}>
+              <article className="winner-placeholder-card" key={item.id}>
                 <div className="winner-photo-placeholder">
-                  <span>FOTO</span>
+                  <span>{t("PHOTO", "FOTO")}</span>
                 </div>
                 <div>
                   <span>{item.category}</span>
-                  <h3>Da aggiungere</h3>
+                  <h3>{t("To be added", "Da aggiungere")}</h3>
                   <p>{item.description}</p>
                 </div>
               </article>
@@ -49,7 +52,7 @@ export function WinnersPage() {
         </section>
 
         <p className="winners-coming-soon">
-          Struttura pronta. Aggiungeremo anni, categorie, nomi e fotografie in un secondo momento.
+          {t("Years, categories, names and photos will be added in a future release.", "Struttura pronta. Aggiungeremo anni, categorie, nomi e fotografie in un secondo momento.")}
         </p>
       </section>
     </main>

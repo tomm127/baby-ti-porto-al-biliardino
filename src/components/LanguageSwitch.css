@@ -1,0 +1,80 @@
+.btpb-language-switch {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #c8c5bd;
+  color: #172637;
+  width: max-content;
+}
+.btpb-language-switch button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px;
+  font: 700 12px/1 system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: none;
+}
+.btpb-language-switch button[aria-pressed="true"] {
+  background: #172637;
+  color: #fff;
+}
+.btpb-language-switch button:focus-visible {
+  outline: 2px solid #287dbe;
+  outline-offset: 2px;
+}
+.landing-corner-actions {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: 16px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.landing-v2 .landing-corner-actions .landing-admin-link {
+  position: static;
+}
+.winners-language-control {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+.admin-login-language-row,
+.player-language-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.player-language-row {
+  margin: 10px 0 2px;
+  padding: 12px 0 0;
+  border-top: 1px solid #d9d4c9;
+  font-size: 13px;
+  font-weight: 700;
+}
+.tv-language-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+.admin-top-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media (max-width: 600px) {
+  .landing-corner-actions { right: 11px; gap: 5px; }
+  .admin-v2 .admin-top { flex-wrap: wrap; }
+  .admin-v2 .admin-top-actions { max-width: 100%; }
+  .btpb-language-switch button { min-height: 36px; }
+  .winners-header { flex-wrap: wrap; }
+}

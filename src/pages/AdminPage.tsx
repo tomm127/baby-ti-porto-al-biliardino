@@ -1,3 +1,4 @@
+import { btpbText, useBtpbUiLanguage, btpbError, btpbStateLabel } from '../lib/btpbUiText.ts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   adminGenerateKnockout,
@@ -49,10 +50,12 @@ import { KnockoutBracket, QualificationRanking } from '../components/KnockoutBra
 import { useConnectivity } from '../lib/useConnectivity.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 import { TeamLabel } from '../components/TeamLabel.tsx';
+import { LanguageSwitch } from '../components/LanguageSwitch.tsx';
 
 type AdminTab = 'live' | 'teams' | 'groups' | 'bracket' | 'matches' | 'fields' | 'settings';
 
 export function AdminPage() {
+  useBtpbUiLanguage();
   const [authChecked, setAuthChecked] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -77,16 +80,19 @@ export function AdminPage() {
     } catch (e) { setLoginError(e instanceof Error ? e.message : String(e)); }
   }
 
-  if (!authChecked) return <CenteredAdmin title="Controllo sessione…" />;
+  if (!authChecked) return <CenteredAdmin title={btpbText("Controllo sessione…")} />;
   if (!authenticated) {
     return <main className="page page-centered admin-login-page"><section className="login-card admin-login-card">
-      <button className="text-button" onClick={() => navigate('/')}>← Torna indietro</button>
-      <div className="eyebrow">AMMINISTRATORE</div><h1>Controllo torneo</h1>
-      {!hasSupabaseConfig && <div className="alert warning">Supabase non è configurato. Crea prima <code>.env.local</code>.</div>}
+      <div className="admin-login-language-row">
+        <button className="text-button" onClick={() => navigate('/')}>{btpbText("← Torna indietro")}</button>
+        <LanguageSwitch />
+      </div>
+      <div className="eyebrow">{btpbText("AMMINISTRATORE")}</div><h1>{btpbText("Controllo torneo")}</h1>
+      {!hasSupabaseConfig && <div className="alert warning">{btpbText("Supabase non è configurato. Crea prima ")}<code>.env.local</code>.</div>}
       <label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void login()} placeholder="••••••••" />
-      {loginError && <div className="alert error">{loginError}</div>}
-      <button className="button primary" disabled={!password || !hasSupabaseConfig} onClick={() => void login()}>Entra</button>
-      <p className="hint">L'email tecnica dell'admin resta nella configurazione dell'app; nell'interfaccia inserisci solo la password.</p>
+      {loginError && <div className="alert error">{btpbError(loginError)}</div>}
+      <button className="button primary" disabled={!password || !hasSupabaseConfig} onClick={() => void login()}>{btpbText("Entra")}</button>
+      <p className="hint">{btpbText("L'email tecnica dell'admin resta nella configurazione dell'app; nell'interfaccia inserisci solo la password.")}</p>
     </section></main>;
   }
 
@@ -150,12 +156,12 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
   const selected = tournaments.find((t) => t.id === selectedId);
   const navItems: [AdminTab,string][] = [
     ['live','Dashboard'],
-    ['matches','Partite'],
-    ['teams','Squadre'],
-    ['groups','Gironi'],
-    ['bracket','Tabellone'],
-    ['fields','Campi'],
-    ['settings','Impostazioni'],
+    ['matches',btpbText("Partite")],
+    ['teams',btpbText("Squadre")],
+    ['groups',btpbText("Gironi")],
+    ['bracket',btpbText("Tabellone")],
+    ['fields',btpbText("Campi")],
+    ['settings',btpbText("Impostazioni")],
   ];
 
   function goTo(key: AdminTab) {
@@ -173,28 +179,29 @@ function AdminWorkspace({ onLogout }: { onLogout: () => void }) {
   }
 
   return <main className="admin-shell admin-v2">
-    {mobileMenuOpen && <button className="admin-mobile-backdrop" aria-label="Chiudi menu" onClick={() => setMobileMenuOpen(false)} />}
+    {mobileMenuOpen && <button className="admin-mobile-backdrop" aria-label={btpbText("Chiudi menu")} onClick={() => setMobileMenuOpen(false)} />}
     <aside className={mobileMenuOpen ? 'sidebar mobile-open' : 'sidebar'}>
       <div className="brand">BTPB<br/><span>ADMIN</span></div>
       {navItems.map(([key,label]) => <button className={tab === key && !creating ? 'side-link active' : 'side-link'} key={key} onClick={() => goTo(key)}>{label}</button>)}
       <div className="sidebar-spacer" />
-      <button className="side-link" onClick={() => { setCreating(true); setMobileMenuOpen(false); }}>＋ Nuovo torneo</button>
-      <button className="side-link" onClick={() => void logout()}>Esci admin</button>
+      <button className="side-link" onClick={() => { setCreating(true); setMobileMenuOpen(false); }}>{btpbText("＋ Nuovo torneo")}</button>
+      <button className="side-link" onClick={() => void logout()}>{btpbText("Esci admin")}</button>
     </aside>
 
     <section className="admin-main">
       <header className="admin-top">
-        <button className="admin-menu-button" aria-label="Apri menu" onClick={() => setMobileMenuOpen(true)}>☰</button>
-        <div className="admin-title-block">{selected && <div className="eyebrow">{selected.name}</div>}<h1>{creating ? 'Nuovo torneo' : tabTitle(tab)}</h1></div>
+        <button className="admin-menu-button" aria-label={btpbText("Apri menu")} onClick={() => setMobileMenuOpen(true)}>☰</button>
+        <div className="admin-title-block">{selected && <div className="eyebrow">{selected.name}</div>}<h1>{creating ? btpbText("Nuovo torneo") : tabTitle(tab)}</h1></div>
         <div className="admin-top-actions">
+          <LanguageSwitch />
           {!creating && tournaments.length > 0 && <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>{tournaments.map((t) => <option value={t.id} key={t.id}>{t.name} · {t.status}</option>)}</select>}
-          {bundle?.tournament.status === 'active' && <span className={bundle.settings.emergency_paused ? 'live-badge paused' : 'live-badge'}>{bundle.settings.emergency_paused ? 'Ⅱ PAUSA' : '● LIVE'}</span>}
+          {bundle?.tournament.status === 'active' && <span className={bundle.settings.emergency_paused ? 'live-badge paused' : 'live-badge'}>{bundle.settings.emergency_paused ? btpbText("Ⅱ PAUSA") : '● LIVE'}</span>}
         </div>
       </header>
 
       <ConnectionBanner online={online} />
-      {error && <div className="alert error">{error}</div>}
-      {loading && <div className="empty-state">Caricamento…</div>}
+      {error && <div className="alert error">{btpbError(error)}</div>}
+      {loading && <div className="empty-state">{btpbText("Caricamento…")}</div>}
       {creating && <CreateTournamentForm onCreated={created} onCancel={() => setCreating(false)} />}
       {!creating && !loading && tournaments.length === 0 && <CreateTournamentForm onCreated={created} />}
       {!creating && bundle && <AdminTabContent tab={tab} bundle={bundle} refresh={refreshBundle} setError={setError} matchesFinishedOnly={matchesFinishedOnly} onOpenFinishedMatches={goToFinishedMatches} />}
@@ -269,51 +276,51 @@ function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPa
   }
 
   if (bundle.tournament.status === 'draft') return <section className="panel draft-launch">
-    <div className="panel-title"><h2>Torneo non iniziato</h2><span>BOZZA</span></div>
+    <div className="panel-title"><h2>{btpbText("Torneo non iniziato")}</h2><span>{btpbText("BOZZA")}</span></div>
     <div className="stats-strip">
-      <Stat n={activeTeams} label="squadre"/>
-      <Stat n={bundle.groups.length} label="gironi"/>
-      <Stat n={bundle.fields.filter(f=>f.is_active).length} label="campi"/>
-      <Stat n={bundle.matches.length} label="partite"/>
+      <Stat n={activeTeams} label={btpbText("squadre")}/>
+      <Stat n={bundle.groups.length} label={btpbText("gironi")}/>
+      <Stat n={bundle.fields.filter(f=>f.is_active).length} label={btpbText("campi")}/>
+      <Stat n={bundle.matches.length} label={btpbText("partite")}/>
     </div>
-    <p>Puoi ancora modificare squadre, gironi, campi e regole. Finché il torneo resta in bozza <strong>nessuna partita viene assegnata ai campi</strong>.</p>
-    <div className="draft-settings-note">Per avviare coda e assegnazione automatica ai tavoli vai in <strong>Impostazioni → Gestione torneo</strong> e premi <strong>INIZIA TORNEO</strong>.</div>
+    <p>{btpbText("Puoi ancora modificare squadre, gironi, campi e regole. Finché il torneo resta in bozza ")}<strong>{btpbText("nessuna partita viene assegnata ai campi")}</strong>.</p>
+    <div className="draft-settings-note">{btpbText("Per avviare coda e assegnazione automatica ai tavoli vai in ")}<strong>{btpbText("Impostazioni → Gestione torneo")}</strong>{btpbText(" e premi ")}<strong>{btpbText("INIZIA TORNEO")}</strong>.</div>
   </section>;
 
   return <>
     <div className="admin-dashboard-toolbar">
       <button className="admin-finished-link" onClick={onOpenFinishedMatches}>
-        ✓ Vai alle partite concluse
+        {btpbText("✓ Vai alle partite concluse")}
       </button>
 
       {tournamentPaused
         ? <button className="admin-total-resume-button" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(false)}>
-            {busy === 'emergency-pause' ? 'Ripresa…' : '▶ RIPRENDI TORNEO'}
+            {busy === 'emergency-pause' ? btpbText("Ripresa…") : btpbText("▶ RIPRENDI TORNEO")}
           </button>
         : <button className="admin-total-pause-button" disabled={busy === 'emergency-pause'} onClick={() => setPauseConfirm(true)}>
-            PAUSA TOTALE
+            {btpbText("PAUSA TOTALE")}
           </button>}
     </div>
 
     {pauseConfirm && !tournamentPaused && <div className="admin-total-pause-confirm">
-      <strong>Mettere in pausa tutto il torneo?</strong>
+      <strong>{btpbText("Mettere in pausa tutto il torneo?")}</strong>
       <div>
-        <button onClick={() => setPauseConfirm(false)}>Annulla</button>
-        <button className="confirm-danger" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(true)}>PAUSA TOTALE</button>
+        <button onClick={() => setPauseConfirm(false)}>{btpbText("Annulla")}</button>
+        <button className="confirm-danger" disabled={busy === 'emergency-pause'} onClick={() => void setEmergencyPause(true)}>{btpbText("PAUSA TOTALE")}</button>
       </div>
     </div>}
 
     <section className="stats-strip admin-dashboard-stats">
-      <Stat n={completedMatches} label="concluse"/>
-      <Stat n={queue.length} label="in coda"/>
-      <Stat n={activeTeams} label="squadre attive"/>
-      <Stat n={completedGroups} label={`gironi completati / ${bundle.groups.length}`}/>
+      <Stat n={completedMatches} label={btpbText("concluse")}/>
+      <Stat n={queue.length} label={btpbText("in coda")}/>
+      <Stat n={activeTeams} label={btpbText("squadre attive")}/>
+      <Stat n={completedGroups} label={`${btpbText("gironi completati / ")}${bundle.groups.length}`}/>
     </section>
 
     <div className="field-grid admin-live-fields">{bundle.fields.filter((f) => f.is_active).map((field) => <AdminFieldCard key={field.id} fieldName={field.name} match={matchByField.get(field.id)} bundle={bundle} busy={busy} act={act} tournamentPaused={tournamentPaused} />)}</div>
 
-    <section className="panel admin-queue-panel"><div className="panel-title"><h2>Coda partite</h2><span>trascina oppure usa i controlli</span></div>
-      {queue.length === 0 && <div className="empty-state compact">Coda vuota</div>}
+    <section className="panel admin-queue-panel"><div className="panel-title"><h2>{btpbText("Coda partite")}</h2><span>{btpbText("trascina oppure usa i controlli")}</span></div>
+      {queue.length === 0 && <div className="empty-state compact">{btpbText("Coda vuota")}</div>}
       {queue.slice(0, 50).map((m, i) => <div
         className={draggedId === m.id ? 'queue-row admin-queue-row dragging' : 'queue-row admin-queue-row'}
         key={m.id}
@@ -323,14 +330,14 @@ function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPa
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); void dropQueue(m.id); }}
       >
-        <span className="queue-drag" title="Trascina">⋮⋮</span>
+        <span className="queue-drag" title={btpbText("Trascina")}>⋮⋮</span>
         <span className="queue-number">{i+1}</span>
         <div className="queue-match-copy"><small>{adminStageLabel(bundle,m)}</small><strong className="team-pair-label"><TeamLabel bundle={bundle} teamId={m.team1_id} /><em>vs</em><TeamLabel bundle={bundle} teamId={m.team2_id} /></strong></div>
         <div className="queue-controls">
-          <button title="In cima" disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,0)}>⇈</button>
-          <button title="Su" disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i-1)}>↑</button>
-          <button title="Giù" disabled={i===queue.length-1 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i+1)}>↓</button>
-          <button disabled={busy === m.id} onClick={() => void act(m.id, () => adminPostponeMatch(m.id))}>In fondo</button>
+          <button title={btpbText("In cima")} disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,0)}>⇈</button>
+          <button title={btpbText("Su")} disabled={i===0 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i-1)}>↑</button>
+          <button title={btpbText("Giù")} disabled={i===queue.length-1 || busy.startsWith('queue-')} onClick={() => void moveQueue(i,i+1)}>↓</button>
+          <button disabled={busy === m.id} onClick={() => void act(m.id, () => adminPostponeMatch(m.id))}>{btpbText("In fondo")}</button>
         </div>
       </div>)}
     </section>
@@ -344,13 +351,13 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused 
   const [score2, setScore2] = useState('');
   useEffect(() => { const id = window.setInterval(() => setTick(Date.now()), 500); return () => window.clearInterval(id); }, []);
   useEffect(() => { setScore1(String(match?.score_team1 ?? '')); setScore2(String(match?.score_team2 ?? '')); }, [match?.id, match?.score_team1, match?.score_team2]);
-  if (!match) return <section className="field-card field-free"><div className="panel-title"><strong>{fieldName}</strong><span>LIBERO</span></div><div className="field-empty">Campo disponibile</div></section>;
+  if (!match) return <section className="field-card field-free"><div className="panel-title"><strong>{fieldName}</strong><span>{btpbText("LIBERO")}</span></div><div className="field-empty">{btpbText("Campo disponibile")}</div></section>;
   const liveMatch = match;
   const remaining = secondsRemaining(liveMatch);
   const t1=teamName(bundle,liveMatch.team1_id), t2=teamName(bundle,liveMatch.team2_id);
 
   function cancel(){ if(window.confirm(`Annullare ${t1} vs ${t2}?`)) void act(`cancel-${liveMatch.id}`,()=>adminCancelMatch(liveMatch.id)); }
-  function forfeit(loserId:string|null, loserName:string){ if(loserId && window.confirm(`Sconfitta a tavolino per ${loserName}? Il risultato sarà ${liveMatch.goal_target ?? 1}-0.`)) void act(`forfeit-${liveMatch.id}`,()=>adminForfeitMatch(liveMatch.id,loserId)); }
+  function forfeit(loserId:string|null, loserName:string){ if(loserId && window.confirm(`${btpbText("Sconfitta a tavolino per ")}${loserName}${btpbText("? Il risultato sarà ")}${liveMatch.goal_target ?? 1}-0.`)) void act(`forfeit-${liveMatch.id}`,()=>adminForfeitMatch(liveMatch.id,loserId)); }
   function saveResult() {
     const a=Number(score1), b=Number(score2);
     if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0) return;
@@ -358,26 +365,26 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused 
   }
 
   return <section className={tournamentPaused ? 'field-card admin-field-paused' : 'field-card'}>
-    <div className="panel-title"><strong>{fieldName}</strong><span>{tournamentPaused ? 'TORNEO IN PAUSA' : adminStatusLabel(liveMatch.status)}</span></div>
+    <div className="panel-title"><strong>{fieldName}</strong><span>{tournamentPaused ? btpbText("TORNEO IN PAUSA") : adminStatusLabel(liveMatch.status)}</span></div>
     <div className="field-match"><strong><TeamLabel bundle={bundle} teamId={liveMatch.team1_id} name={t1} /></strong><small>VS</small><strong><TeamLabel bundle={bundle} teamId={liveMatch.team2_id} name={t2} /></strong></div>
     <div className="big-timer">{liveMatch.duration_seconds == null ? '∞' : formatClock(remaining)}</div>
     <div className="actions field-actions">
-      {['called','ready'].includes(liveMatch.status) && <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => startMatch(liveMatch.id))}>Avvia</button>}
+      {['called','ready'].includes(liveMatch.status) && <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => startMatch(liveMatch.id))}>{btpbText("Avvia")}</button>}
       {liveMatch.status === 'playing' && liveMatch.pause_allowed && (liveMatch.paused_at
-        ? <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => resumeMatch(liveMatch.id))}>Riprendi</button>
-        : <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => pauseMatch(liveMatch.id))}>Pausa</button>)}
-      {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina</button>}
-      {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button disabled={busy.includes(liveMatch.id)} onClick={() => void act(`post-${liveMatch.id}`,()=>adminPostponeMatch(liveMatch.id))}>Rimanda</button>}
-      {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button className="danger-soft" disabled={busy.includes(liveMatch.id)} onClick={cancel}>Annulla</button>}
+        ? <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => resumeMatch(liveMatch.id))}>{btpbText("Riprendi")}</button>
+        : <button disabled={busy===liveMatch.id || tournamentPaused} onClick={() => void act(liveMatch.id, () => pauseMatch(liveMatch.id))}>{btpbText("Pausa")}</button>)}
+      {liveMatch.status === 'playing' && <button disabled={busy===liveMatch.id || confirmEnd} onClick={() => setConfirmEnd(true)}>{btpbText("Termina")}</button>}
+      {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button disabled={busy.includes(liveMatch.id)} onClick={() => void act(`post-${liveMatch.id}`,()=>adminPostponeMatch(liveMatch.id))}>{btpbText("Rimanda")}</button>}
+      {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <button className="danger-soft" disabled={busy.includes(liveMatch.id)} onClick={cancel}>{btpbText("Annulla")}</button>}
     </div>
 
     {liveMatch.status === 'awaiting_result' && <div className="admin-field-result">
-      <span>Inserisci risultato</span>
-      <div><input type="number" min="0" value={score1} onChange={(e)=>setScore1(e.target.value)}/><strong>–</strong><input type="number" min="0" value={score2} onChange={(e)=>setScore2(e.target.value)}/><button disabled={busy===`score-${liveMatch.id}` || score1==='' || score2===''} onClick={saveResult}>Salva</button></div>
+      <span>{btpbText("Inserisci risultato")}</span>
+      <div><input type="number" min="0" value={score1} onChange={(e)=>setScore1(e.target.value)}/><strong>–</strong><input type="number" min="0" value={score2} onChange={(e)=>setScore2(e.target.value)}/><button disabled={busy===`score-${liveMatch.id}` || score1==='' || score2===''} onClick={saveResult}>{btpbText("Salva")}</button></div>
     </div>}
 
-    {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <div className="forfeit-row"><span>Tavolino:</span><button onClick={()=>forfeit(liveMatch.team1_id,t1)}>perde {t1}</button><button onClick={()=>forfeit(liveMatch.team2_id,t2)}>perde {t2}</button></div>}
-    {confirmEnd && liveMatch.status === 'playing' && <div className="admin-inline-confirm"><strong>Concludere la partita?</strong><span>La partita verrà chiusa e passerà all’inserimento del risultato.</span><div><button disabled={busy===liveMatch.id} onClick={() => setConfirmEnd(false)}>Continua</button><button className="danger-soft" disabled={busy===liveMatch.id} onClick={() => { setConfirmEnd(false); void act(liveMatch.id, () => endMatchEarly(liveMatch.id)); }}>Concludi partita</button></div></div>}
+    {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <div className="forfeit-row"><span>{btpbText("Tavolino:")}</span><button onClick={()=>forfeit(liveMatch.team1_id,t1)}>{btpbText("perde ")}{t1}</button><button onClick={()=>forfeit(liveMatch.team2_id,t2)}>{btpbText("perde ")}{t2}</button></div>}
+    {confirmEnd && liveMatch.status === 'playing' && <div className="admin-inline-confirm"><strong>{btpbText("Concludere la partita?")}</strong><span>{btpbText("La partita verrà chiusa e passerà all’inserimento del risultato.")}</span><div><button disabled={busy===liveMatch.id} onClick={() => setConfirmEnd(false)}>{btpbText("Continua")}</button><button className="danger-soft" disabled={busy===liveMatch.id} onClick={() => { setConfirmEnd(false); void act(liveMatch.id, () => endMatchEarly(liveMatch.id)); }}>{btpbText("Concludi partita")}</button></div></div>}
   </section>;
 }
 
@@ -400,7 +407,7 @@ function buildGroupMessage(bundle: TournamentBundle) {
     ].join('\n'));
 
   blocks.push([
-    NO_GROUP_LABEL,
+    bundle.groups.some(group => group.name === "No group") ? NO_GROUP_LABEL : btpbText(NO_GROUP_LABEL),
     ...bundle.teams
       .filter((team) => !groupByTeam.has(team.id))
       .sort((a,b) => a.name.localeCompare(b.name,'it'))
@@ -420,6 +427,7 @@ function parseGroupMessage(bundle: TournamentBundle, value: string) {
     for (const line of block.slice(1)) teamOccurrences.set(line, (teamOccurrences.get(line) ?? 0) + 1);
   }
 
+  for (const block of rawBlocks) { if (block[0] === 'No group' && !groupsByName.has('No group')) block[0] = NO_GROUP_LABEL; }
   const headerOccurrences = new Map<string, number>();
   for (const block of rawBlocks) headerOccurrences.set(block[0], (headerOccurrences.get(block[0]) ?? 0) + 1);
 
@@ -482,7 +490,7 @@ function parseBulkTeams(bundle: TournamentBundle, value: string, requirePin: boo
       name,
       pin,
       valid: Boolean(name) && !duplicateInput && !alreadyExists && !missingPin,
-      reason: !name ? 'Nome vuoto' : duplicateInput ? 'Duplicata nel messaggio' : alreadyExists ? 'Squadra già esistente' : missingPin ? 'PIN mancante' : '',
+      reason: !name ? btpbText("Nome vuoto") : duplicateInput ? btpbText("Duplicata nel messaggio") : alreadyExists ? btpbText("Squadra già esistente") : missingPin ? btpbText("PIN mancante") : '',
     };
   });
   return { lines, valid: lines.length > 0 && lines.every((line) => line.valid) };
@@ -515,14 +523,14 @@ function TeamsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
     });
   }
 
-  async function rename(teamId:string,current:string){ const next=window.prompt('Nuovo nome squadra',current); if(next===null||!next.trim()||next.trim()===current)return; await act(teamId,()=>adminRenameTeam(teamId,next)); }
-  async function changePin(teamId:string){ const next=window.prompt('Nuovo PIN. Lascia vuoto per rimuoverlo.'); if(next===null)return; await act(`pin-${teamId}`,()=>adminSetTeamPin(teamId,next)); }
+  async function rename(teamId:string,current:string){ const next=window.prompt(btpbText("Nuovo nome squadra"),current); if(next===null||!next.trim()||next.trim()===current)return; await act(teamId,()=>adminRenameTeam(teamId,next)); }
+  async function changePin(teamId:string){ const next=window.prompt(btpbText("Nuovo PIN. Lascia vuoto per rimuoverlo.")); if(next===null)return; await act(`pin-${teamId}`,()=>adminSetTeamPin(teamId,next)); }
 
   async function uploadAvatar(teamId:string,file:File){
     await act(`avatar-${teamId}`,()=>adminUploadTeamAvatar(bundle.tournament.id,teamId,file));
   }
   async function removeAvatar(teamId:string){
-    if(!window.confirm('Rimuovere l’immagine di questa squadra?'))return;
+    if(!window.confirm(btpbText("Rimuovere l’immagine di questa squadra?")))return;
     await act(`avatar-${teamId}`,()=>adminRemoveTeamAvatar(bundle.tournament.id,teamId));
   }
 
@@ -531,67 +539,67 @@ function TeamsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
     if((currentGroup||null)===nextGroup)return;
     if(bundle.tournament.status==='active'){
       const message=nextGroup
-        ? 'Spostare questa squadra durante il torneo cancellerà TUTTI i suoi risultati di girone già giocati e creerà le partite nel nuovo girone. Continuare?'
-        : 'Mettere questa squadra in Nessun girone? Verranno cancellate TUTTE le sue partite e i risultati di girone. La squadra non giocherà finché non verrà riassegnata. Continuare?';
+        ? btpbText("Spostare questa squadra durante il torneo cancellerà TUTTI i suoi risultati di girone già giocati e creerà le partite nel nuovo girone. Continuare?")
+        : btpbText("Mettere questa squadra in Nessun girone? Verranno cancellate TUTTE le sue partite e i risultati di girone. La squadra non giocherà finché non verrà riassegnata. Continuare?");
       if(!window.confirm(message))return;
     }
     await act(`move-${teamId}`,()=>adminForceMoveTeamToGroup(bundle.tournament.id,teamId,nextGroup));
   }
 
-  async function withdraw(teamId:string,name:string){ if(!window.confirm(`Ritirare ${name}? I risultati già conclusi restano; le partite non ancora concluse vengono rimosse.`))return; await act(`withdraw-${teamId}`,()=>adminWithdrawTeam(bundle.tournament.id,teamId)); }
-  async function restore(teamId:string,name:string){ if(!window.confirm(`Riattivare ${name}? Le partite mancanti verranno aggiunte in fondo alla coda.`))return; await act(`restore-${teamId}`,()=>adminRestoreTeam(bundle.tournament.id,teamId)); }
-  async function remove(teamId:string,name:string){ if(!window.confirm(`ELIMINARE COMPLETAMENTE ${name}? Verranno cancellati anche tutti i risultati di girone della squadra e la classifica sarà ricalcolata.`))return; await act(`delete-${teamId}`,()=>adminDeleteTeamCompletely(bundle.tournament.id,teamId)); }
+  async function withdraw(teamId:string,name:string){ if(!window.confirm(`${btpbText("Ritirare ")}${name}${btpbText("? I risultati già conclusi restano; le partite non ancora concluse vengono rimosse.")}`))return; await act(`withdraw-${teamId}`,()=>adminWithdrawTeam(bundle.tournament.id,teamId)); }
+  async function restore(teamId:string,name:string){ if(!window.confirm(`${btpbText("Riattivare ")}${name}${btpbText("? Le partite mancanti verranno aggiunte in fondo alla coda.")}`))return; await act(`restore-${teamId}`,()=>adminRestoreTeam(bundle.tournament.id,teamId)); }
+  async function remove(teamId:string,name:string){ if(!window.confirm(`${btpbText("ELIMINARE COMPLETAMENTE ")}${name}${btpbText("? Verranno cancellati anche tutti i risultati di girone della squadra e la classifica sarà ricalcolata.")}`))return; await act(`delete-${teamId}`,()=>adminDeleteTeamCompletely(bundle.tournament.id,teamId)); }
 
   return <>
     <section className="panel team-add-panel">
-      <div className="panel-title"><h2>Aggiungi squadra</h2><span>{bundle.teams.filter(t=>t.status==='active').length} attive</span></div>
+      <div className="panel-title"><h2>{btpbText("Aggiungi squadra")}</h2><span>{bundle.teams.filter(t=>t.status==='active').length}{btpbText(" attive")}</span></div>
       <div className="team-add-grid">
-        <input placeholder="Nome squadra" value={name} disabled={!editable} onChange={e=>setName(e.target.value)}/>
+        <input placeholder={btpbText("Nome squadra")} value={name} disabled={!editable} onChange={e=>setName(e.target.value)}/>
         <select value={groupId} disabled={!editable} onChange={e=>setGroupId(e.target.value)}>
-          <option value="">Nessun girone</option>
+          <option value="">{btpbText("Nessun girone")}</option>
           {bundle.groups.map(g=><option value={g.id} key={g.id}>{g.name}</option>)}
         </select>
         {bundle.settings.team_pin_enabled&&<input placeholder="PIN" value={pin} disabled={!editable} onChange={e=>setPin(e.target.value)}/>}
-        <button className="button primary" disabled={!editable||!name.trim()||busy==='add'||(bundle.settings.team_pin_enabled&&!pin.trim())} onClick={()=>void add()}>＋ Aggiungi</button>
+        <button className="button primary" disabled={!editable||!name.trim()||busy==='add'||(bundle.settings.team_pin_enabled&&!pin.trim())} onClick={()=>void add()}>{btpbText("＋ Aggiungi")}</button>
       </div>
-      <p className="hint">Se scegli <strong>Nessun girone</strong>, la squadra viene salvata ma non entra nel calendario e non può essere scelta dai giocatori.</p>
+      <p className="hint">{btpbText("Se scegli ")}<strong>{btpbText("Nessun girone")}</strong>{btpbText(", la squadra viene salvata ma non entra nel calendario e non può essere scelta dai giocatori.")}</p>
     </section>
 
     <section className="panel bulk-team-panel">
-      <div className="panel-title"><h2>Aggiungi più squadre</h2><span>una per riga</span></div>
-      <p className="hint">Scrivi o incolla le squadre come un messaggio. {bundle.settings.team_pin_enabled ? 'Formato: Nome squadra | PIN' : 'Una squadra per ogni riga.'}</p>
+      <div className="panel-title"><h2>{btpbText("Aggiungi più squadre")}</h2><span>{btpbText("una per riga")}</span></div>
+      <p className="hint">{btpbText("Scrivi o incolla le squadre come un messaggio. ")}{bundle.settings.team_pin_enabled ? btpbText("Formato: Nome squadra | PIN") : btpbText("Una squadra per ogni riga.")}</p>
       <textarea value={bulkText} disabled={!editable} onChange={(e)=>setBulkText(e.target.value)} placeholder={bundle.settings.team_pin_enabled ? 'Team 1 | 1234\nTeam 2 | 5678\nTeam 3 | 9012' : 'Team 1\nTeam 2\nTeam 3'} rows={7}/>
-      {bulkText.trim()&&<div className="bulk-team-preview">{bulkParsed.lines.map((line,index)=><div className={line.valid?'valid':'invalid'} key={`${line.raw}-${index}`}><span>{line.name||line.raw}</span>{line.valid?<strong>OK</strong>:<strong>{line.reason}</strong>}</div>)}</div>}
+      {bulkText.trim()&&<div className="bulk-team-preview">{bulkParsed.lines.map((line,index)=><div className={line.valid?'valid':'invalid'} key={`${line.raw}-${index}`}><span>{line.name||line.raw}</span>{line.valid?<strong>OK</strong>:<strong>{btpbText(line.reason)}</strong>}</div>)}</div>}
       <div className="bulk-team-actions">
-        <label>Inserisci in
+        <label>{btpbText("Inserisci in")}
           <select value={bulkGroupId} disabled={!editable} onChange={(e)=>setBulkGroupId(e.target.value)}>
-            <option value="">Nessun girone</option>
+            <option value="">{btpbText("Nessun girone")}</option>
             {bundle.groups.map((g)=><option value={g.id} key={g.id}>{g.name}</option>)}
           </select>
         </label>
-        <button className="button primary" disabled={!editable||!bulkParsed.valid||busy==='bulk-add'} onClick={()=>void addBulk()}>{busy==='bulk-add'?'Aggiunta…':`AGGIUNGI ${bulkParsed.lines.length||''} SQUADRE`}</button>
+        <button className="button primary" disabled={!editable||!bulkParsed.valid||busy==='bulk-add'} onClick={()=>void addBulk()}>{busy==='bulk-add'?btpbText("Aggiunta…"):`${btpbText("AGGIUNGI ")}${bulkParsed.lines.length||''}${btpbText(" SQUADRE")}`}</button>
       </div>
     </section>
 
-    {bundle.tournament.status==='active'&&<p className="hint">Una squadra aggiunta a torneo avviato e assegnata a un girone riceve le nuove partite in fondo alla coda. Una squadra senza girone resta fuori dal torneo.</p>}
-    {!editable&&<div className="alert warning compact">La struttura delle squadre è bloccata dopo l'inizio del tabellone eliminatorio.</div>}
+    {bundle.tournament.status==='active'&&<p className="hint">{btpbText("Una squadra aggiunta a torneo avviato e assegnata a un girone riceve le nuove partite in fondo alla coda. Una squadra senza girone resta fuori dal torneo.")}</p>}
+    {!editable&&<div className="alert warning compact">{btpbText("La struttura delle squadre è bloccata dopo l'inizio del tabellone eliminatorio.")}</div>}
 
-    <section className="panel"><div className="panel-title"><h2>{bundle.teams.length} squadre</h2><span>{bundle.teams.filter((team)=>!groupByTeam.has(team.id)).length} senza girone</span></div>
+    <section className="panel"><div className="panel-title"><h2>{bundle.teams.length}{btpbText(" squadre")}</h2><span>{bundle.teams.filter((team)=>!groupByTeam.has(team.id)).length}{btpbText(" senza girone")}</span></div>
       <div className="team-admin-list">{bundle.teams.map(t=>{const currentGroup=groupByTeam.get(t.id)??'';return <div className={`team-admin-row ${t.status==='withdrawn'?'withdrawn':''}`} key={t.id}>
         <div className="team-avatar-admin">
-          <label className="team-avatar-picker" title={t.avatar_url ? 'Cambia immagine' : 'Aggiungi immagine'}>
+          <label className="team-avatar-picker" title={t.avatar_url ? btpbText("Cambia immagine") : btpbText("Aggiungi immagine")}>
             {t.avatar_url ? <img src={t.avatar_url} alt="" /> : <span>＋</span>}
             <input type="file" accept="image/*" disabled={busy.includes(t.id)} onChange={(e)=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';if(file)void uploadAvatar(t.id,file);}} />
           </label>
-          {t.avatar_url && <button className="team-avatar-remove" title="Rimuovi immagine" disabled={busy.includes(t.id)} onClick={()=>void removeAvatar(t.id)}>×</button>}
+          {t.avatar_url && <button className="team-avatar-remove" title={btpbText("Rimuovi immagine")} disabled={busy.includes(t.id)} onClick={()=>void removeAvatar(t.id)}>×</button>}
         </div>
         <button className="team-name-button" disabled={busy.includes(t.id)} onClick={()=>void rename(t.id,t.name)}>{t.name}</button>
         <select value={currentGroup} disabled={!editable||t.status==='withdrawn'||busy.includes(t.id)} onChange={e=>void move(t.id,currentGroup,e.target.value)}>
-          <option value="">Nessun girone</option>
+          <option value="">{btpbText("Nessun girone")}</option>
           {bundle.groups.map(g=><option value={g.id} key={g.id}>{g.name}</option>)}
         </select>
-        <span className={`status-pill ${t.status}`}>{currentGroup?'nel torneo':'fuori girone'}</span>
-        <div className="team-row-actions"><button disabled={busy.includes(t.id)} onClick={()=>void changePin(t.id)}>PIN</button>{t.status==='active'?<button disabled={!editable||busy.includes(t.id)} onClick={()=>void withdraw(t.id,t.name)}>Ritira</button>:<button disabled={!editable||busy.includes(t.id)||!currentGroup} onClick={()=>void restore(t.id,t.name)}>Riattiva</button>}<button className="danger-soft" disabled={!editable||busy.includes(t.id)} onClick={()=>void remove(t.id,t.name)}>Elimina</button></div>
+        <span className={`status-pill ${t.status}`}>{currentGroup?btpbText("nel torneo"):btpbText("fuori girone")}</span>
+        <div className="team-row-actions"><button disabled={busy.includes(t.id)} onClick={()=>void changePin(t.id)}>PIN</button>{t.status==='active'?<button disabled={!editable||busy.includes(t.id)} onClick={()=>void withdraw(t.id,t.name)}>{btpbText("Ritira")}</button>:<button disabled={!editable||busy.includes(t.id)||!currentGroup} onClick={()=>void restore(t.id,t.name)}>{btpbText("Riattiva")}</button>}<button className="danger-soft" disabled={!editable||busy.includes(t.id)} onClick={()=>void remove(t.id,t.name)}>{btpbText("Elimina")}</button></div>
       </div>})}</div>
     </section>
   </>;
@@ -612,8 +620,8 @@ function GroupsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
     if(current===groupId)return;
     if(bundle.tournament.status==='active'){
       const msg=groupId
-        ? 'Spostare una squadra a torneo avviato cancella tutti i suoi risultati di girone e genera le nuove partite nel girone di destinazione. Continuare?'
-        : 'Mettere la squadra in Nessun girone cancella tutte le sue partite e i risultati di girone. Continuare?';
+        ? btpbText("Spostare una squadra a torneo avviato cancella tutti i suoi risultati di girone e genera le nuove partite nel girone di destinazione. Continuare?")
+        : btpbText("Mettere la squadra in Nessun girone cancella tutte le sue partite e i risultati di girone. Continuare?");
       if(!window.confirm(msg))return;
     }
     setBusy(teamId); setError('');
@@ -624,7 +632,7 @@ function GroupsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 
   async function applyLayout(){
     if(!parsed.valid)return;
-    if(bundle.tournament.status==='active'&&!window.confirm('Aggiornare la composizione dei gironi? Ogni squadra spostata perderà le precedenti partite e i risultati di girone. Continuare?'))return;
+    if(bundle.tournament.status==='active'&&!window.confirm(btpbText("Aggiornare la composizione dei gironi? Ogni squadra spostata perderà le precedenti partite e i risultati di girone. Continuare?")))return;
     setBusy('layout');setError('');
     try{
       await adminApplyGroupLayout(bundle.tournament.id,parsed.assignments);
@@ -639,35 +647,35 @@ function GroupsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 
   return <>
     <section className="panel group-message-editor">
-      <div className="panel-title"><h2>Composizione gironi</h2><span>editor rapido</span></div>
-      <p className="hint">La prima riga di ogni blocco è il <strong>nome esistente del girone</strong>. Non può essere rinominato qui. Lascia una riga vuota tra i gironi. Usa <strong>Nessun girone</strong> per le squadre che non devono giocare.</p>
+      <div className="panel-title"><h2>{btpbText("Composizione gironi")}</h2><span>{btpbText("editor rapido")}</span></div>
+      <p className="hint">{btpbText("La prima riga di ogni blocco è il ")}<strong>{btpbText("nome esistente del girone")}</strong>{btpbText(". Non può essere rinominato qui. Lascia una riga vuota tra i gironi. Usa ")}<strong>{btpbText("Nessun girone")} / {btpbText("Nessun girone") === "No group" ? "Nessun girone" : "No group"}</strong>{btpbText(" per le squadre che non devono giocare.")}</p>
       <textarea value={layoutText} disabled={busy==='layout'||bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'} onChange={(e)=>{setLayoutText(e.target.value);setLayoutDirty(true);}} rows={Math.min(28,Math.max(12,layoutText.split('\n').length+1))}/>
 
       <div className="group-message-preview">
         {parsed.blocks.map((block,index)=><div className="group-message-block" key={`${block.header}-${index}`}>
-          <strong className={block.headerValid?'valid':'invalid'}>{block.header}</strong>
+          <strong className={block.headerValid?'valid':'invalid'}>{block.header === NO_GROUP_LABEL ? btpbText(NO_GROUP_LABEL) : block.header}</strong>
           {block.teams.map((team,teamIndex)=><span className={team.valid&&block.headerValid?'valid':'invalid'} key={`${team.name}-${teamIndex}`}>{team.name}</span>)}
         </div>)}
       </div>
 
       {!parsed.valid&&layoutText.trim()&&<div className="group-validation-errors">
-        {parsed.missingHeaders.length>0&&<div><strong>Gironi/sezioni mancanti o duplicati:</strong> {parsed.missingHeaders.join(', ')}</div>}
-        {parsed.missingTeams.length>0&&<div><strong>Squadre mancanti, duplicate o scritte male:</strong> {parsed.missingTeams.join(', ')}</div>}
+        {parsed.missingHeaders.length>0&&<div><strong>{btpbText("Gironi/sezioni mancanti o duplicati:")}</strong> {parsed.missingHeaders.map(header => header === NO_GROUP_LABEL ? btpbText(header) : header).join(', ')}</div>}
+        {parsed.missingTeams.length>0&&<div><strong>{btpbText("Squadre mancanti, duplicate o scritte male:")}</strong> {parsed.missingTeams.join(', ')}</div>}
       </div>}
 
       <div className="group-message-actions">
-        <button className="button secondary" disabled={!layoutDirty||busy==='layout'} onClick={()=>{setLayoutText(buildGroupMessage(bundle));setLayoutDirty(false);}}>Ripristina</button>
-        <button className="button primary" disabled={!layoutDirty||!parsed.valid||busy==='layout'||bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'} onClick={()=>void applyLayout()}>{busy==='layout'?'Aggiornamento…':'AGGIORNA GIRONI'}</button>
+        <button className="button secondary" disabled={!layoutDirty||busy==='layout'} onClick={()=>{setLayoutText(buildGroupMessage(bundle));setLayoutDirty(false);}}>{btpbText("Ripristina")}</button>
+        <button className="button primary" disabled={!layoutDirty||!parsed.valid||busy==='layout'||bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'} onClick={()=>void applyLayout()}>{busy==='layout'?btpbText("Aggiornamento…"):btpbText("AGGIORNA GIRONI")}</button>
       </div>
     </section>
 
     <div className="group-admin-grid">{bundle.groups.map((g) => <GroupAdminCard key={g.id} group={g} bundle={bundle} busy={busy} move={move} refresh={refresh} setError={setError} />)}</div>
 
     <section className="panel no-group-card">
-      <div className="panel-title"><h2>Nessun girone</h2><span>{unassigned.length} squadre</span></div>
-      <p className="hint">Queste squadre esistono nell'admin, ma non partecipano al calendario e non sono selezionabili dall'app giocatori.</p>
-      {unassigned.length===0&&<div className="empty-state compact">Nessuna squadra fuori dai gironi.</div>}
-      {unassigned.map((team)=><div className="group-team-editor" key={team.id}><strong>{team.name}</strong><select value="" disabled={bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'||team.status==='withdrawn'||busy===team.id} onChange={(e)=>void move(team.id,e.target.value||null)}><option value="">Nessun girone</option>{bundle.groups.map((target)=><option value={target.id} key={target.id}>{target.name}</option>)}</select></div>)}
+      <div className="panel-title"><h2>{btpbText("Nessun girone")}</h2><span>{unassigned.length}{btpbText(" squadre")}</span></div>
+      <p className="hint">{btpbText("Queste squadre esistono nell'admin, ma non partecipano al calendario e non sono selezionabili dall'app giocatori.")}</p>
+      {unassigned.length===0&&<div className="empty-state compact">{btpbText("Nessuna squadra fuori dai gironi.")}</div>}
+      {unassigned.map((team)=><div className="group-team-editor" key={team.id}><strong>{team.name}</strong><select value="" disabled={bundle.tournament.phase!=='groups'||bundle.tournament.status==='completed'||team.status==='withdrawn'||busy===team.id} onChange={(e)=>void move(team.id,e.target.value||null)}><option value="">{btpbText("Nessun girone")}</option>{bundle.groups.map((target)=><option value={target.id} key={target.id}>{target.name}</option>)}</select></div>)}
     </section>
   </>;
 }
@@ -694,10 +702,10 @@ function GroupAdminCard({ group, bundle, busy, move, refresh, setError }: { grou
   const memberships = bundle.groupTeams.filter((gt)=>gt.group_id===group.id);
   return <section className="panel">
     <div className="panel-title group-title-editor">
-      {!editingName?<div className="group-name-display"><h2>{group.name}</h2><button title="Modifica nome girone" aria-label={`Modifica nome ${group.name}`} onClick={()=>setEditingName(true)}>✎</button></div>:<div className="group-name-rename"><input autoFocus value={name} disabled={renaming} onChange={(e)=>setName(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')void rename();if(e.key==='Escape'){setName(group.name);setEditingName(false);}}}/><button disabled={renaming} onClick={()=>void rename()}>Salva</button><button disabled={renaming} onClick={()=>{setName(group.name);setEditingName(false);}}>Annulla</button></div>}
-      <span>{memberships.length} squadre</span>
+      {!editingName?<div className="group-name-display"><h2>{group.name}</h2><button title={btpbText("Modifica nome girone")} aria-label={`${btpbText("Modifica nome ")}${group.name}`} onClick={()=>setEditingName(true)}>✎</button></div>:<div className="group-name-rename"><input autoFocus value={name} disabled={renaming} onChange={(e)=>setName(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')void rename();if(e.key==='Escape'){setName(group.name);setEditingName(false);}}}/><button disabled={renaming} onClick={()=>void rename()}>{btpbText("Salva")}</button><button disabled={renaming} onClick={()=>{setName(group.name);setEditingName(false);}}>{btpbText("Annulla")}</button></div>}
+      <span>{memberships.length}{btpbText(" squadre")}</span>
     </div>
-    {memberships.map((gt) => { const team = bundle.teams.find((t)=>t.id===gt.team_id); return <div className="group-team-editor" key={gt.id}><strong>{team?.name}</strong><select disabled={bundle.tournament.phase !== 'groups' || bundle.tournament.status === 'completed' || team?.status==='withdrawn' || busy===gt.team_id} value={group.id} onChange={(e)=>void move(gt.team_id,e.target.value||null)}><option value="">Nessun girone</option>{bundle.groups.map((target)=><option value={target.id} key={target.id}>{target.name}</option>)}</select></div>; })}
+    {memberships.map((gt) => { const team = bundle.teams.find((t)=>t.id===gt.team_id); return <div className="group-team-editor" key={gt.id}><strong>{team?.name}</strong><select disabled={bundle.tournament.phase !== 'groups' || bundle.tournament.status === 'completed' || team?.status==='withdrawn' || busy===gt.team_id} value={group.id} onChange={(e)=>void move(gt.team_id,e.target.value||null)}><option value="">{btpbText("Nessun girone")}</option>{bundle.groups.map((target)=><option value={target.id} key={target.id}>{target.name}</option>)}</select></div>; })}
   </section>;
 }
 
@@ -715,10 +723,10 @@ function BracketAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 
   return <>
     <section className="panel bracket-admin-panel">
-      <div className="panel-title"><h2>Eliminazione diretta</h2><span>{bundle.tournament.phase}</span></div>
+      <div className="panel-title"><h2>{btpbText("Eliminazione diretta")}</h2><span>{bundle.tournament.phase}</span></div>
       {bundle.knockoutRounds.length === 0 && <>
-        <p>Il tabellone viene generato automaticamente quando si chiude l'ultima partita dei gironi.</p>
-        {groupsComplete && <div className="inline-actions"><button className="button primary" disabled={busy} onClick={() => void generate()}>{busy ? 'Generazione…' : 'Genera tabellone ora'}</button></div>}
+        <p>{btpbText("Il tabellone viene generato automaticamente quando si chiude l'ultima partita dei gironi.")}</p>
+        {groupsComplete && <div className="inline-actions"><button className="button primary" disabled={busy} onClick={() => void generate()}>{busy ? btpbText("Generazione…") : btpbText("Genera tabellone ora")}</button></div>}
       </>}
       <KnockoutBracket bundle={bundle} />
     </section>
@@ -759,38 +767,38 @@ function MatchesAdmin({ bundle, refresh, setError, finishedOnly = false }: Admin
     matches:filtered.filter((m)=>m.group_id===group.id),
   })).filter((section)=>section.matches.length>0);
   const knockout = filtered.filter((m)=>m.stage!=='group');
-  if(knockout.length) groupSections.push({id:'knockout',title:'Eliminazione diretta',matches:knockout});
-  const sections = view==='chronology' ? [{id:'all',title:'Cronologia totale',matches:chronologyMatches}] : groupSections;
+  if(knockout.length) groupSections.push({id:'knockout',title:btpbText("Eliminazione diretta"),matches:knockout});
+  const sections = view==='chronology' ? [{id:'all',title:btpbText("Cronologia totale"),matches:chronologyMatches}] : groupSections;
 
   const statuses: MatchRow['status'][] = ['scheduled','queued','called','ready','playing','awaiting_result','finished','postponed','cancelled','forfeit'];
 
   return <>
     <section className="panel admin-match-filters">
-      <div className="panel-title"><h2>Partite</h2><span>{filtered.length} visualizzate / {bundle.matches.length}</span></div>
+      <div className="panel-title"><h2>{btpbText("Partite")}</h2><span>{filtered.length}{btpbText(" visualizzate / ")}{bundle.matches.length}</span></div>
       <div className="admin-match-filter-grid">
-        <label className="admin-search-field"><span>Cerca</span><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Squadra, girone o fase…" /></label>
-        <label><span>Stato</span><select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value as 'all'|MatchRow['status'])}><option value="all">Tutti gli stati</option>{statuses.map((status)=><option value={status} key={status}>{adminStatusLabel(status)}</option>)}</select></label>
-        <label><span>Campo</span><select value={fieldFilter} onChange={(e)=>setFieldFilter(e.target.value)}><option value="all">Tutti i campi</option>{bundle.fields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select></label>
+        <label className="admin-search-field"><span>{btpbText("Cerca")}</span><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder={btpbText("Squadra, girone o fase…")} /></label>
+        <label><span>{btpbText("Stato")}</span><select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value as 'all'|MatchRow['status'])}><option value="all">{btpbText("Tutti gli stati")}</option>{statuses.map((status)=><option value={status} key={status}>{adminStatusLabel(status)}</option>)}</select></label>
+        <label><span>{btpbText("Campo")}</span><select value={fieldFilter} onChange={(e)=>setFieldFilter(e.target.value)}><option value="all">{btpbText("Tutti i campi")}</option>{bundle.fields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select></label>
       </div>
       <div className="admin-match-filter-bottom">
         <div className="admin-checkboxes">
-          <label><input type="checkbox" checked={showFuture} onChange={(e)=>setShowFuture(e.target.checked)}/> Future / in corso</label>
-          <label><input type="checkbox" checked={showFinished} onChange={(e)=>setShowFinished(e.target.checked)}/> Finite / chiuse</label>
+          <label><input type="checkbox" checked={showFuture} onChange={(e)=>setShowFuture(e.target.checked)}/>{btpbText(" Future / in corso")}</label>
+          <label><input type="checkbox" checked={showFinished} onChange={(e)=>setShowFinished(e.target.checked)}/>{btpbText(" Finite / chiuse")}</label>
         </div>
         <div className="admin-view-toggle">
-          <button className={view==='chronology'?'active':''} onClick={()=>setView('chronology')}>Cronologia totale</button>
+          <button className={view==='chronology'?'active':''} onClick={()=>setView('chronology')}>{btpbText("Cronologia totale")}</button>
           {view==='chronology' && <button
             className="admin-chronology-direction"
-            title={chronologyDirection==='asc' ? 'Prima le partite più vecchie' : 'Prima le partite più recenti'}
-            aria-label={chronologyDirection==='asc' ? 'Ordine cronologico crescente' : 'Ordine cronologico decrescente'}
+            title={chronologyDirection==='asc' ? btpbText("Prima le partite più vecchie") : btpbText("Prima le partite più recenti")}
+            aria-label={chronologyDirection==='asc' ? btpbText("Ordine cronologico crescente") : btpbText("Ordine cronologico decrescente")}
             onClick={()=>setChronologyDirection((current)=>current==='asc'?'desc':'asc')}
           >{chronologyDirection==='asc' ? '↑' : '↓'}</button>}
-          <button className={view==='groups'?'active':''} onClick={()=>setView('groups')}>Per gironi</button>
+          <button className={view==='groups'?'active':''} onClick={()=>setView('groups')}>{btpbText("Per gironi")}</button>
         </div>
       </div>
     </section>
 
-    {sections.length===0 && <div className="empty-state">Nessuna partita corrisponde ai filtri.</div>}
+    {sections.length===0 && <div className="empty-state">{btpbText("Nessuna partita corrisponde ai filtri.")}</div>}
     {sections.map((section)=><section className="panel admin-match-section" key={section.id}>
       <div className="panel-title"><h2>{section.title}</h2><span>{section.matches.length}</span></div>
       <div className="admin-match-list">{section.matches.map((m)=><AdminMatchRow key={m.id} m={m} bundle={bundle} refresh={refresh} setError={setError} freeFields={freeFields}/>)}</div>
@@ -824,11 +832,11 @@ function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchR
     </div>
 
     <div className="admin-match-actions-v2">
-      <div className="score-mini"><input type="number" min="0" value={s1} disabled={busy} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} disabled={busy} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || !m.team1_id || !m.team2_id || s1.trim()==='' || s2.trim()===''} onClick={()=>void save()}>{closed?'Correggi':'Salva'}</button></div>
+      <div className="score-mini"><input type="number" min="0" value={s1} disabled={busy} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} disabled={busy} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || !m.team1_id || !m.team2_id || s1.trim()==='' || s2.trim()===''} onClick={()=>void save()}>{closed?btpbText("Correggi"):btpbText("Salva")}</button></div>
       {!fullyClosed && <div className="admin-match-inline-actions">
-        {['queued','called','ready','playing','awaiting_result'].includes(m.status) && <select defaultValue="" disabled={busy || freeFields.length===0} onChange={(e)=>{const id=e.currentTarget.value;e.currentTarget.value='';if(id)void run(()=>adminAssignMatchField(m.id,id));}}><option value="">Assegna campo…</option>{freeFields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select>}
-        {!['scheduled'].includes(m.status) && <button disabled={busy} onClick={()=>void run(()=>adminPostponeMatch(m.id))}>Rimanda</button>}
-        <button className="danger-soft" disabled={busy} onClick={()=>{if(window.confirm('Annullare questa partita?'))void run(()=>adminCancelMatch(m.id));}}>Annulla</button>
+        {['queued','called','ready','playing','awaiting_result'].includes(m.status) && <select defaultValue="" disabled={busy || freeFields.length===0} onChange={(e)=>{const id=e.currentTarget.value;e.currentTarget.value='';if(id)void run(()=>adminAssignMatchField(m.id,id));}}><option value="">{btpbText("Assegna campo…")}</option>{freeFields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select>}
+        {!['scheduled'].includes(m.status) && <button disabled={busy} onClick={()=>void run(()=>adminPostponeMatch(m.id))}>{btpbText("Rimanda")}</button>}
+        <button className="danger-soft" disabled={busy} onClick={()=>{if(window.confirm(btpbText("Annullare questa partita?")))void run(()=>adminCancelMatch(m.id));}}>{btpbText("Annulla")}</button>
       </div>}
     </div>
   </div>;
@@ -840,9 +848,9 @@ function FieldsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   async function act(key:string,fn:()=>Promise<unknown>){setBusy(key);setError('');try{await fn();await refresh();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy('');}}
   async function add(){if(!newName.trim())return;await act('add-field',async()=>{await adminAddField(bundle.tournament.id,newName);setNewName('');});}
   return <>
-    <section className="panel"><div className="panel-title"><h2>Campi</h2><span>{bundle.fields.filter(f=>f.is_active).length} attivi</span></div>
-      <div className="field-add-row"><input placeholder="Nome nuovo campo" value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&void add()}/><button className="button primary" disabled={!newName.trim()||busy==='add-field'} onClick={()=>void add()}>＋ Aggiungi campo</button></div>
-      <p className="hint">Se aggiungi un campo durante il torneo, il motore gli assegna immediatamente la prima partita in coda. Un campo con una partita live non può essere disattivato.</p>
+    <section className="panel"><div className="panel-title"><h2>{btpbText("Campi")}</h2><span>{bundle.fields.filter(f=>f.is_active).length}{btpbText(" attivi")}</span></div>
+      <div className="field-add-row"><input placeholder={btpbText("Nome nuovo campo")} value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&void add()}/><button className="button primary" disabled={!newName.trim()||busy==='add-field'} onClick={()=>void add()}>{btpbText("＋ Aggiungi campo")}</button></div>
+      <p className="hint">{btpbText("Se aggiungi un campo durante il torneo, il motore gli assegna immediatamente la prima partita in coda. Un campo con una partita live non può essere disattivato.")}</p>
     </section>
     <div className="field-admin-grid">{bundle.fields.map(f=><FieldAdminRow key={f.id} field={f} busy={busy} act={act}/>)}</div>
   </>;
@@ -851,7 +859,7 @@ function FieldsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 function FieldAdminRow({field,busy,act}:{field:TournamentBundle['fields'][number];busy:string;act:(k:string,fn:()=>Promise<unknown>)=>Promise<void>}){
   const [name,setName]=useState(field.name); useEffect(()=>setName(field.name),[field.name]);
   async function save(nextActive=field.is_active){const clean=name.trim()||field.name;setName(clean);await act(field.id,()=>adminUpdateField(field.id,clean,nextActive));}
-  return <section className={`panel field-admin-card ${field.is_active?'':'inactive'}`}><div className="panel-title"><span>Ordine {field.sort_order}</span><span>{field.is_active?'ATTIVO':'OFF'}</span></div><input className="field-name-input" value={name} disabled={busy===field.id} onChange={e=>setName(e.target.value)} onBlur={()=>{if(name.trim()!==field.name)void save();}} onKeyDown={e=>{if(e.key==='Enter')(e.currentTarget as HTMLInputElement).blur();}}/><label className="switch-row"><input type="checkbox" checked={field.is_active} disabled={busy===field.id} onChange={e=>void save(e.target.checked)}/><span>Campo disponibile per il motore</span></label></section>;
+  return <section className={`panel field-admin-card ${field.is_active?'':'inactive'}`}><div className="panel-title"><span>{btpbText("Ordine ")}{field.sort_order}</span><span>{field.is_active?btpbText("ATTIVO"):'OFF'}</span></div><input className="field-name-input" value={name} disabled={busy===field.id} onChange={e=>setName(e.target.value)} onBlur={()=>{if(name.trim()!==field.name)void save();}} onKeyDown={e=>{if(e.key==='Enter')(e.currentTarget as HTMLInputElement).blur();}}/><label className="switch-row"><input type="checkbox" checked={field.is_active} disabled={busy===field.id} onChange={e=>void save(e.target.checked)}/><span>{btpbText("Campo disponibile per il motore")}</span></label></section>;
 }
 
 function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
@@ -969,20 +977,20 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
   return <div className="settings-page-v3">
     <section className="panel settings-tournament-control-card">
       <div className="panel-title">
-        <h2>Gestione torneo</h2>
-        <span>avvio e reset</span>
+        <h2>{btpbText("Gestione torneo")}</h2>
+        <span>{btpbText("avvio e reset")}</span>
       </div>
 
       <div className="settings-tournament-control-copy">
-        <span className="settings-status-chip">{isDraft?'BOZZA':bundle.tournament.status}</span>
+        <span className="settings-status-chip">{isDraft?btpbText("BOZZA"):bundle.tournament.status}</span>
         {isDraft
           ? <>
-              <strong>Il torneo non è ancora partito</strong>
-              <p>Le partite esistono ma restano non assegnate. Premendo INIZIA TORNEO entrano nella coda e i primi match vengono assegnati automaticamente ai campi liberi.</p>
+              <strong>{btpbText("Il torneo non è ancora partito")}</strong>
+              <p>{btpbText("Le partite esistono ma restano non assegnate. Premendo INIZIA TORNEO entrano nella coda e i primi match vengono assegnati automaticamente ai campi liberi.")}</p>
             </>
           : <>
-              <strong>Il torneo è stato avviato</strong>
-              <p>L'assegnazione automatica ai campi è attiva secondo la coda. Puoi azzerare tutte le partite per tornare alla configurazione iniziale.</p>
+              <strong>{btpbText("Il torneo è stato avviato")}</strong>
+              <p>{btpbText("L'assegnazione automatica ai campi è attiva secondo la coda. Puoi azzerare tutte le partite per tornare alla configurazione iniziale.")}</p>
             </>}
       </div>
 
@@ -992,7 +1000,7 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
           disabled={controlBusy!==''}
           onClick={()=>void startTournament()}
         >
-          {controlBusy==='start'?'Avvio…':'INIZIA TORNEO'}
+          {controlBusy==='start'?btpbText("Avvio…"):btpbText("INIZIA TORNEO")}
         </button>}
 
         <button
@@ -1000,17 +1008,17 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
           disabled={controlBusy!==''}
           onClick={()=>setResetConfirm(true)}
         >
-          RESET PARTITE
+          {btpbText("RESET PARTITE")}
         </button>
       </div>
 
       {resetConfirm && <div className="settings-reset-confirm">
-        <strong>Azzerare tutte le partite?</strong>
-        <p>Verranno cancellati risultati, timer, assegnazioni ai campi, coda, qualificazioni e tabellone eliminatorio. Squadre, gironi, campi e regole resteranno invariati. Il torneo tornerà in bozza e dovrai premere di nuovo INIZIA TORNEO.</p>
+        <strong>{btpbText("Azzerare tutte le partite?")}</strong>
+        <p>{btpbText("Verranno cancellati risultati, timer, assegnazioni ai campi, coda, qualificazioni e tabellone eliminatorio. Squadre, gironi, campi e regole resteranno invariati. Il torneo tornerà in bozza e dovrai premere di nuovo INIZIA TORNEO.")}</p>
         <div>
-          <button disabled={controlBusy!==''} onClick={()=>setResetConfirm(false)}>Annulla</button>
+          <button disabled={controlBusy!==''} onClick={()=>setResetConfirm(false)}>{btpbText("Annulla")}</button>
           <button className="confirm-danger" disabled={controlBusy!==''} onClick={()=>void resetTournament()}>
-            {controlBusy==='reset'?'Reset…':'SÌ, RESETTA PARTITE'}
+            {controlBusy==='reset'?'Reset…':btpbText("SÌ, RESETTA PARTITE")}
           </button>
         </div>
       </div>}
@@ -1018,13 +1026,13 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
 
     <section className="panel settings-identity-card">
       <div className="panel-title">
-        <h2>Identità torneo</h2>
-        <span>visibile a giocatori e TV</span>
+        <h2>{btpbText("Identità torneo")}</h2>
+        <span>{btpbText("visibile a giocatori e TV")}</span>
       </div>
 
       <div className="settings-identity-grid">
         <label className="settings-name-field">
-          <span>Nome torneo</span>
+          <span>{btpbText("Nome torneo")}</span>
           <input
             value={tournamentName}
             maxLength={120}
@@ -1040,43 +1048,43 @@ function SettingsAdmin({ bundle, refresh, setError }: AdminPanelProps) {
       </div>
 
       <div className="settings-name-actions">
-        <p className="hint">Cambiare il nome non modifica lo slug, quindi i link e i QR già condivisi continuano a funzionare.</p>
+        <p className="hint">{btpbText("Cambiare il nome non modifica lo slug, quindi i link e i QR già condivisi continuano a funzionare.")}</p>
         <button
           className="button primary"
           disabled={nameBusy||!nameChanged||!tournamentName.trim()}
           onClick={()=>void saveName()}
         >
-          {nameBusy?'Salvataggio…':'SALVA NOME'}
+          {nameBusy?btpbText("Salvataggio…"):btpbText("SALVA NOME")}
         </button>
       </div>
     </section>
 
     <div className="settings-grid">
       <section className="panel settings-editor">
-        <div className="panel-title"><h2>Regole modificabili</h2><span>future partite</span></div>
-        <label>Qualificate per girone<input type="number" min="1" value={qualifiers} onChange={e=>setQualifiers(e.target.value)}/></label>
-        <label className="check-row"><input type="checkbox" checked={pause} onChange={e=>setPause(e.target.checked)}/>Permetti pausa timer</label>
-        <label className="check-row"><input type="checkbox" checked={pins} onChange={e=>setPins(e.target.checked)}/>PIN squadre</label>
-        <label className="check-row"><input type="checkbox" checked={third} onChange={e=>setThird(e.target.checked)}/>3º/4º posto</label>
+        <div className="panel-title"><h2>{btpbText("Regole modificabili")}</h2><span>{btpbText("future partite")}</span></div>
+        <label>{btpbText("Qualificate per girone")}<input type="number" min="1" value={qualifiers} onChange={e=>setQualifiers(e.target.value)}/></label>
+        <label className="check-row"><input type="checkbox" checked={pause} onChange={e=>setPause(e.target.checked)}/>{btpbText("Permetti pausa timer")}</label>
+        <label className="check-row"><input type="checkbox" checked={pins} onChange={e=>setPins(e.target.checked)}/>{btpbText("PIN squadre")}</label>
+        <label className="check-row"><input type="checkbox" checked={third} onChange={e=>setThird(e.target.checked)}/>{btpbText("3º/4º posto")}</label>
         <div className="rule-editor-list">
-          <EditableRule title="Gironi" minutes={gm} goals={gg} setMinutes={setGm} setGoals={setGg}/>
-          <EditableRule title="Eliminatorie" minutes={km} goals={kg} setMinutes={setKm} setGoals={setKg}/>
-          <EditableRule title="Finale" minutes={fm} goals={fg} setMinutes={setFm} setGoals={setFg}/>
-          <EditableRule title="3º/4º posto" minutes={tm} goals={tg} setMinutes={setTm} setGoals={setTg}/>
+          <EditableRule title={btpbText("Gironi")} minutes={gm} goals={gg} setMinutes={setGm} setGoals={setGg}/>
+          <EditableRule title={btpbText("Eliminatorie")} minutes={km} goals={kg} setMinutes={setKm} setGoals={setKg}/>
+          <EditableRule title={btpbText("Finale")} minutes={fm} goals={fg} setMinutes={setFm} setGoals={setFg}/>
+          <EditableRule title={btpbText("3º/4º posto")} minutes={tm} goals={tg} setMinutes={setTm} setGoals={setTg}/>
         </div>
         <button className="button primary" disabled={busy} onClick={()=>void save()}>
-          {busy?'Salvataggio…':'SALVA REGOLE'}
+          {busy?btpbText("Salvataggio…"):btpbText("SALVA REGOLE")}
         </button>
-        <p className="hint">Le modifiche si applicano alle partite non ancora iniziate. Una partita già in corso conserva timer e target con cui è partita.</p>
+        <p className="hint">{btpbText("Le modifiche si applicano alle partite non ancora iniziate. Una partita già in corso conserva timer e target con cui è partita.")}</p>
       </section>
 
       <section className="panel">
-        <div className="panel-title"><h2>Stato torneo</h2><span>sola lettura</span></div>
-        <KeyValue k="Ordine coda" v={bundle.settings.ordering_mode==='group_rotation'?'Rotazione gironi':'Girone per girone'}/>
-        <KeyValue k="Torneo" v={bundle.tournament.status}/>
-        <KeyValue k="Fase" v={bundle.tournament.phase}/>
+        <div className="panel-title"><h2>{btpbText("Stato torneo")}</h2><span>{btpbText("sola lettura")}</span></div>
+        <KeyValue k={btpbText("Ordine coda")} v={bundle.settings.ordering_mode==='group_rotation'?'Rotazione gironi':'Girone per girone'}/>
+        <KeyValue k={btpbText("Torneo")} v={btpbStateLabel(bundle.tournament.status)}/>
+        <KeyValue k={btpbText("Fase")} v={btpbStateLabel(bundle.tournament.phase)}/>
         <KeyValue k="Slug" v={bundle.tournament.slug}/>
-        <p className="hint">L'ordine generale non viene rigenerato a torneo avviato: per cambiarlo usa i controlli della coda nella Dashboard.</p>
+        <p className="hint">{btpbText("L'ordine generale non viene rigenerato a torneo avviato: per cambiarlo usa i controlli della coda nella Dashboard.")}</p>
       </section>
     </div>
   </div>;
@@ -1090,8 +1098,8 @@ function CreateTournamentForm({ onCreated, onCancel }: { onCreated:(t:Tournament
   const [teamText,setTeamText]=useState('');
   const [groupAssignmentMode,setGroupAssignmentMode]=useState<'auto'|'manual'>('auto');
   const [groupCount,setGroupCount]=useState(4);
-  const [groupNames,setGroupNames]=useState<string[]>(['Girone A','Girone B','Girone C','Girone D']);
-  const [fieldText,setFieldText]=useState('Campo 1, Campo 2, Campo 3');
+  const [groupNames,setGroupNames]=useState<string[]>([btpbText("Girone A"),btpbText("Girone B"),btpbText("Girone C"),btpbText("Girone D")]);
+  const [fieldText,setFieldText]=useState(btpbText("Campo 1, Campo 2, Campo 3"));
   const [orderingMode,setOrderingMode]=useState<'group_rotation'|'group_sequential'>('group_rotation');
   const [qualifiers,setQualifiers]=useState(2);
   const [pins,setPins]=useState(false);
@@ -1131,10 +1139,10 @@ function CreateTournamentForm({ onCreated, onCancel }: { onCreated:(t:Tournament
 
   useEffect(()=>{
     if(effectiveGroupCount<1) return;
-    setGroupNames(current=>Array.from({length:effectiveGroupCount},(_,i)=>current[i]??`Girone ${String.fromCharCode(65+i)}`));
+    setGroupNames(current=>Array.from({length:effectiveGroupCount},(_,i)=>current[i]??`${btpbText("Girone ")}${String.fromCharCode(65+i)}`));
   },[effectiveGroupCount]);
 
-  const resolvedGroupNames=useMemo(()=>Array.from({length:effectiveGroupCount},(_,i)=>groupNames[i]?.trim()||`Girone ${String.fromCharCode(65+i)}`),[effectiveGroupCount,groupNames]);
+  const resolvedGroupNames=useMemo(()=>Array.from({length:effectiveGroupCount},(_,i)=>groupNames[i]?.trim()||`${btpbText("Girone ")}${String.fromCharCode(65+i)}`),[effectiveGroupCount,groupNames]);
   const fieldNames=useMemo(()=>fieldText.split(',').map(s=>s.trim()).filter(Boolean),[fieldText]);
 
   function updateGroupName(index:number,value:string){
@@ -1174,40 +1182,40 @@ function CreateTournamentForm({ onCreated, onCancel }: { onCreated:(t:Tournament
   }
 
   return <div className="create-grid">
-    <section className="panel form-panel"><div className="eyebrow">1 · IDENTITÀ</div><h2>Torneo</h2><label>Nome</label><input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Summer Cup 2026"/><label>Slug URL</label><input value={slug} onChange={(e)=>setSlug(slugify(e.target.value))} placeholder="summer-cup-2026"/></section>
+    <section className="panel form-panel"><div className="eyebrow">{btpbText("1 · IDENTITÀ")}</div><h2>{btpbText("Torneo")}</h2><label>{btpbText("Nome")}</label><input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Summer Cup 2026"/><label>Slug URL</label><input value={slug} onChange={(e)=>setSlug(slugify(e.target.value))} placeholder="summer-cup-2026"/></section>
 
-    <section className="panel form-panel"><div className="eyebrow">2 · SQUADRE</div><h2>Partecipanti</h2>
-      <label>Come vuoi assegnare i gironi?<select value={groupAssignmentMode} onChange={(e)=>setGroupAssignmentMode(e.target.value as 'auto'|'manual')}><option value="auto">Distribuzione automatica equilibrata</option><option value="manual">Inserisco le squadre già divise per girone</option></select></label>
+    <section className="panel form-panel"><div className="eyebrow">{btpbText("2 · SQUADRE")}</div><h2>{btpbText("Partecipanti")}</h2>
+      <label>{btpbText("Come vuoi assegnare i gironi?")}<select value={groupAssignmentMode} onChange={(e)=>setGroupAssignmentMode(e.target.value as 'auto'|'manual')}><option value="auto">{btpbText("Distribuzione automatica equilibrata")}</option><option value="manual">{btpbText("Inserisco le squadre già divise per girone")}</option></select></label>
       <textarea rows={13} value={teamText} onChange={(e)=>setTeamText(e.target.value)} placeholder={groupAssignmentMode==='manual'?(pins?'Team 1 | 1111\nTeam 2 | 2222\n\nTeam 3 | 3333\nTeam 4 | 4444\nTeam 5 | 5555\n\nTeam 6 | 6666':'Team 1\nTeam 2\n\nTeam 3\nTeam 4\nTeam 5\n\nTeam 6'):(pins?'Pesto Boys | 1234\nSpritz United | 7788':'Pesto Boys\nSpritz United\nBanana FC')}/>
-      {groupAssignmentMode==='manual' && <div className="alert info compact"><strong>Una riga vuota = nuovo girone.</strong><br/>Nell'esempio: Team 1–2 nel primo, Team 3–5 nel secondo, Team 6 nel terzo.</div>}
-      <label className="check-row"><input type="checkbox" checked={pins} onChange={(e)=>setPins(e.target.checked)}/>Richiedi PIN individuale alle squadre</label>
-      <span className="hint">{parsedTeams.length} squadre lette{groupAssignmentMode==='manual'?` · ${manualGroups.length} gironi rilevati`:''}</span>
-      {groupAssignmentMode==='manual' && manualGroups.length>0 && <div className="group-import-preview">{manualGroups.map((group,index)=><div key={index}><strong>{resolvedGroupNames[index]??`Girone ${String.fromCharCode(65+index)}`}</strong><span>{group.length} squadre</span><small>{group.map(t=>t.name).join(', ')}</small></div>)}</div>}
+      {groupAssignmentMode==='manual' && <div className="alert info compact"><strong>{btpbText("Una riga vuota = nuovo girone.")}</strong><br/>{btpbText("Nell'esempio: Team 1–2 nel primo, Team 3–5 nel secondo, Team 6 nel terzo.")}</div>}
+      <label className="check-row"><input type="checkbox" checked={pins} onChange={(e)=>setPins(e.target.checked)}/>{btpbText("Richiedi PIN individuale alle squadre")}</label>
+      <span className="hint">{parsedTeams.length}{btpbText(" squadre lette")}{groupAssignmentMode==='manual'?` · ${manualGroups.length}${btpbText(" gironi rilevati")}`:''}</span>
+      {groupAssignmentMode==='manual' && manualGroups.length>0 && <div className="group-import-preview">{manualGroups.map((group,index)=><div key={index}><strong>{resolvedGroupNames[index]??`${btpbText("Girone ")}${String.fromCharCode(65+index)}`}</strong><span>{group.length}{btpbText(" squadre")}</span><small>{group.map(t=>t.name).join(', ')}</small></div>)}</div>}
     </section>
 
-    <section className="panel form-panel"><div className="eyebrow">3 · STRUTTURA</div><h2>Gironi e campi</h2>
+    <section className="panel form-panel"><div className="eyebrow">{btpbText("3 · STRUTTURA")}</div><h2>{btpbText("Gironi e campi")}</h2>
       <div className="two-cols">
-        {groupAssignmentMode==='auto'?<label>Numero gironi<input type="number" min="1" max="26" value={groupCount} onChange={(e)=>setGroupCount(Number(e.target.value))}/></label>:<label>Gironi rilevati<input type="number" value={effectiveGroupCount} readOnly/></label>}
-        <label>Qualificate/girone<input type="number" min="1" value={qualifiers} onChange={(e)=>setQualifiers(Number(e.target.value))}/></label>
+        {groupAssignmentMode==='auto'?<label>{btpbText("Numero gironi")}<input type="number" min="1" max="26" value={groupCount} onChange={(e)=>setGroupCount(Number(e.target.value))}/></label>:<label>{btpbText("Gironi rilevati")}<input type="number" value={effectiveGroupCount} readOnly/></label>}
+        <label>{btpbText("Qualificate/girone")}<input type="number" min="1" value={qualifiers} onChange={(e)=>setQualifiers(Number(e.target.value))}/></label>
       </div>
-      <div className="group-name-list"><label>Nomi personalizzati dei gironi</label>{resolvedGroupNames.map((_,index)=><div className="group-name-row" key={index}><span>{index+1}</span><input value={groupNames[index]??''} onChange={(e)=>updateGroupName(index,e.target.value)} placeholder={`Girone ${String.fromCharCode(65+index)}`}/></div>)}</div>
-      <label>Ordine partite<select value={orderingMode} onChange={(e)=>setOrderingMode(e.target.value as typeof orderingMode)}><option value="group_rotation">Una partita per girone a rotazione</option><option value="group_sequential">Un girone alla volta</option></select></label>
-      <label>Nomi campi, separati da virgola<input value={fieldText} onChange={(e)=>setFieldText(e.target.value)}/></label>
-      <label className="check-row"><input type="checkbox" checked={pause} onChange={(e)=>setPause(e.target.checked)}/>Permetti pausa timer</label><label className="check-row"><input type="checkbox" checked={thirdPlace} onChange={(e)=>setThirdPlace(e.target.checked)}/>Partita 3º/4º posto</label>
+      <div className="group-name-list"><label>{btpbText("Nomi personalizzati dei gironi")}</label>{resolvedGroupNames.map((_,index)=><div className="group-name-row" key={index}><span>{index+1}</span><input value={groupNames[index]??''} onChange={(e)=>updateGroupName(index,e.target.value)} placeholder={`${btpbText("Girone ")}${String.fromCharCode(65+index)}`}/></div>)}</div>
+      <label>{btpbText("Ordine partite")}<select value={orderingMode} onChange={(e)=>setOrderingMode(e.target.value as typeof orderingMode)}><option value="group_rotation">{btpbText("Una partita per girone a rotazione")}</option><option value="group_sequential">{btpbText("Un girone alla volta")}</option></select></label>
+      <label>{btpbText("Nomi campi, separati da virgola")}<input value={fieldText} onChange={(e)=>setFieldText(e.target.value)}/></label>
+      <label className="check-row"><input type="checkbox" checked={pause} onChange={(e)=>setPause(e.target.checked)}/>{btpbText("Permetti pausa timer")}</label><label className="check-row"><input type="checkbox" checked={thirdPlace} onChange={(e)=>setThirdPlace(e.target.checked)}/>{btpbText("Partita 3º/4º posto")}</label>
     </section>
 
-    <section className="panel form-panel"><div className="eyebrow">4 · REGOLE</div><h2>Tempo e goal</h2><RuleInputs title="Gironi" minutes={groupMinutes} setMinutes={setGroupMinutes} goals={groupGoals} setGoals={setGroupGoals}/><RuleInputs title="Eliminatorie" minutes={koMinutes} setMinutes={setKoMinutes} goals={koGoals} setGoals={setKoGoals}/><RuleInputs title="Finale" minutes={finalMinutes} setMinutes={setFinalMinutes} goals={finalGoals} setGoals={setFinalGoals}/><p className="hint">Lascia vuoto il tempo per giocare solo “primo a N”. Nelle eliminatorie il pareggio a tempo scaduto passa al golden goal.</p></section>
-    <section className="panel create-submit"><div><h2>Genera il torneo</h2><p>{groupAssignmentMode==='manual'?'Le squadre verranno inserite esattamente nei gironi indicati dagli spazi vuoti.':'Distribuzione automatica equilibrata nei gironi.'} Il calendario resta round-robin di sola andata e la coda segue la modalità scelta.</p></div>{error&&<div className="alert error">{error}</div>}<div className="inline-actions">{onCancel&&<button className="button secondary" onClick={onCancel}>Annulla</button>}<button className="button primary" disabled={busy} onClick={()=>void create()}>{busy?'Creazione…':'CREA TORNEO'}</button></div></section>
+    <section className="panel form-panel"><div className="eyebrow">{btpbText("4 · REGOLE")}</div><h2>{btpbText("Tempo e goal")}</h2><RuleInputs title={btpbText("Gironi")} minutes={groupMinutes} setMinutes={setGroupMinutes} goals={groupGoals} setGoals={setGroupGoals}/><RuleInputs title={btpbText("Eliminatorie")} minutes={koMinutes} setMinutes={setKoMinutes} goals={koGoals} setGoals={setKoGoals}/><RuleInputs title={btpbText("Finale")} minutes={finalMinutes} setMinutes={setFinalMinutes} goals={finalGoals} setGoals={setFinalGoals}/><p className="hint">{btpbText("Lascia vuoto il tempo per giocare solo “primo a N”. Nelle eliminatorie il pareggio a tempo scaduto passa al golden goal.")}</p></section>
+    <section className="panel create-submit"><div><h2>{btpbText("Genera il torneo")}</h2><p>{groupAssignmentMode==='manual'?btpbText("Le squadre verranno inserite esattamente nei gironi indicati dagli spazi vuoti."):btpbText("Distribuzione automatica equilibrata nei gironi.")}{btpbText(" Il calendario resta round-robin di sola andata e la coda segue la modalità scelta.")}</p></div>{error&&<div className="alert error">{btpbError(error)}</div>}<div className="inline-actions">{onCancel&&<button className="button secondary" onClick={onCancel}>{btpbText("Annulla")}</button>}<button className="button primary" disabled={busy} onClick={()=>void create()}>{busy?btpbText("Creazione…"):btpbText("CREA TORNEO")}</button></div></section>
   </div>;
 }
 
-function RuleInputs({title,minutes,setMinutes,goals,setGoals}:{title:string;minutes:string;setMinutes:(v:string)=>void;goals:string;setGoals:(v:string)=>void}) { return <div className="rule-row"><strong>{title}</strong><label>min<input type="number" min="1" value={minutes} onChange={(e)=>setMinutes(e.target.value)}/></label><span>oppure</span><label>goal<input type="number" min="1" value={goals} onChange={(e)=>setGoals(e.target.value)}/></label></div>; }
+function RuleInputs({title,minutes,setMinutes,goals,setGoals}:{title:string;minutes:string;setMinutes:(v:string)=>void;goals:string;setGoals:(v:string)=>void}) { return <div className="rule-row"><strong>{title}</strong><label>min<input type="number" min="1" value={minutes} onChange={(e)=>setMinutes(e.target.value)}/></label><span>{btpbText("oppure")}</span><label>goal<input type="number" min="1" value={goals} onChange={(e)=>setGoals(e.target.value)}/></label></div>; }
 function Stat({n,label}:{n:number;label:string}){return <div><strong>{n}</strong><span>{label}</span></div>;}
 function KeyValue({k,v}:{k:string;v:string}){return <div className="key-value"><span>{k}</span><strong>{v}</strong></div>;}
-function teamName(bundle:TournamentBundle,id:string|null){return bundle.teams.find(t=>t.id===id)?.name??'Da definire';}
+function teamName(bundle:TournamentBundle,id:string|null){return bundle.teams.find(t=>t.id===id)?.name??btpbText("Da definire");}
 function normalizeAdminSearch(value:string){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase('it');}
-function adminStageLabel(bundle:TournamentBundle,m:MatchRow){if(m.stage==='group')return bundle.groups.find(g=>g.id===m.group_id)?.name??'Girone';if(m.stage==='final')return'Finale';if(m.stage==='third_place')return'3° / 4° posto';return bundle.knockoutRounds.find(r=>r.id===m.knockout_round_id)?.name??'Eliminazione';}
-function adminStatusLabel(status:MatchRow['status']){const labels:Record<MatchRow['status'],string>={scheduled:'PROGRAMMATA',queued:'IN CODA',called:'CHIAMATA',ready:'PRONTA',playing:'IN CORSO',awaiting_result:'ATTESA RISULTATO',finished:'FINITA',postponed:'RIMANDATA',cancelled:'ANNULLATA',forfeit:'TAVOLINO'};return labels[status];}
-function tabTitle(tab:AdminTab){return {live:'Dashboard',teams:'Squadre',groups:'Gironi',bracket:'Tabellone',matches:'Partite',fields:'Campi',settings:'Impostazioni'}[tab];}
+function adminStageLabel(bundle:TournamentBundle,m:MatchRow){if(m.stage==='group')return bundle.groups.find(g=>g.id===m.group_id)?.name??btpbText("Girone");if(m.stage==='final')return btpbText("Finale");if(m.stage==='third_place')return btpbText("3° / 4° posto");return btpbText(bundle.knockoutRounds.find(r=>r.id===m.knockout_round_id)?.name ?? "Eliminazione");}
+function adminStatusLabel(status:MatchRow['status']){const labels:Record<MatchRow['status'],string>={scheduled:btpbText("PROGRAMMATA"),queued:btpbText("IN CODA"),called:btpbText("CHIAMATA"),ready:btpbText("PRONTA"),playing:btpbText("IN CORSO"),awaiting_result:btpbText("ATTESA RISULTATO"),finished:btpbText("FINITA"),postponed:btpbText("RIMANDATA"),cancelled:btpbText("ANNULLATA"),forfeit:btpbText("TAVOLINO")};return labels[status];}
+function tabTitle(tab:AdminTab){return {live:'Dashboard',teams:btpbText("Squadre"),groups:btpbText("Gironi"),bracket:btpbText("Tabellone"),matches:btpbText("Partite"),fields:btpbText("Campi"),settings:btpbText("Impostazioni")}[tab];}
 function CenteredAdmin({title}:{title:string}){return <main className="page page-centered"><section className="login-card"><h2>{title}</h2></section></main>;}
 interface AdminPanelProps{bundle:TournamentBundle;refresh:()=>Promise<void>;setError:(s:string)=>void;}

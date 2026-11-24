@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLanguage } from '../lib/i18n.tsx';
+import { LanguageSwitch } from '../components/LanguageSwitch.tsx';
 import { hasSupabaseConfig } from '../lib/supabase.ts';
 import { listActiveTournamentsResilient, type TournamentRow } from '../lib/api.ts';
 import { useConnectivity } from '../lib/useConnectivity.ts';
@@ -8,6 +10,7 @@ import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 const LAST_PLAYER_TOURNAMENT_KEY = 'btpb:last-player-tournament';
 
 export function LandingPage() {
+  const { t: text } = useLanguage();
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [loading, setLoading] = useState(hasSupabaseConfig);
   const [error, setError] = useState('');
@@ -50,26 +53,27 @@ export function LandingPage() {
 
   if (resumingPlayer) {
     return <main className="page landing-page landing-v2 landing-resuming-player">
-      <div className="landing-resume-copy">Apro la tua squadra…</div>
+      <div className="landing-resume-copy">{text("Opening your team…", "Apro la tua squadra…")}</div>
     </main>;
   }
 
   return (
     <main className="page landing-page landing-v2">
       <button className="landing-winners-link" onClick={() => navigate('/albo-vincitori')}>
-        Albo vincitori
+        {text("Hall of fame", "Albo vincitori")}
       </button>
 
-      <button className="landing-admin-link" onClick={() => navigate('/admin')}>
-        Admin
-      </button>
+      <div className="landing-corner-actions">
+        <LanguageSwitch />
+        <button className="landing-admin-link" onClick={() => navigate('/admin')}>Admin</button>
+      </div>
 
       <section className="landing-shell-v2">
         <div className="landing-brand-v2">
           <img src="/brand/btpb-logo.png" alt="Baby Ti Porto al Biliardino" />
           <div>
             <h1>Baby Ti Porto al Biliardino</h1>
-            <p>Scegli il torneo e inizia.</p>
+            <p>{text("Choose a tournament to get started.", "Scegli il torneo e inizia.")}</p>
           </div>
         </div>
 
@@ -77,8 +81,8 @@ export function LandingPage() {
 
         {!hasSupabaseConfig && (
           <div className="alert warning">
-            <strong>Supabase non è ancora collegato.</strong>
-            <span>Crea <code>.env.local</code> usando il file di esempio incluso nel progetto.</span>
+            <strong>{text("Supabase is not connected yet.", "Supabase non è ancora collegato.")}</strong>
+            <span>{text('Create', 'Crea')} <code>.env.local</code> {text('using the example file included in the project.', 'usando il file di esempio incluso nel progetto.')}</span>
           </div>
         )}
 
@@ -86,19 +90,19 @@ export function LandingPage() {
 
         <div className="landing-tournament-list-v2">
           {loading && (
-            <div className="landing-loading-v2">Caricamento tornei…</div>
+            <div className="landing-loading-v2">{text("Loading tournaments…", "Caricamento tornei…")}</div>
           )}
 
-          {!loading && hasSupabaseConfig && tournaments.length === 0 && (
+          {!loading && !error && hasSupabaseConfig && tournaments.length === 0 && (
             <div className="landing-empty-v2">
-              Nessun torneo attivo.
+              {text("No active tournaments.", "Nessun torneo attivo.")}
             </div>
           )}
 
           {tournaments.map((t) => (
             <article className="landing-tournament-v2" key={t.id}>
               <div className="landing-tournament-title-v2">
-                <span>{t.phase === 'groups' ? 'FASE A GIRONI' : 'ELIMINAZIONE'}</span>
+                <span>{t.phase === 'groups' ? text('GROUP STAGE', 'FASE A GIRONI') : text('KNOCKOUT STAGE', 'ELIMINAZIONE')}</span>
                 <h2>{t.name}</h2>
               </div>
 
@@ -106,15 +110,15 @@ export function LandingPage() {
                 className="landing-play-v2"
                 onClick={() => navigate(`/tournament/${t.slug}`)}
               >
-                <strong>PARTECIPA</strong>
-                <span>Entra nel torneo</span>
+                <strong>{text("JOIN", "PARTECIPA")}</strong>
+                <span>{text("Enter tournament", "Entra nel torneo")}</span>
               </button>
 
               <button
                 className="landing-tv-v2"
                 onClick={() => navigate(`/screen/${t.slug}`)}
               >
-                <span>Schermo TV</span>
+                <span>{text("TV screen", "Schermo TV")}</span>
                 <strong>→</strong>
               </button>
             </article>

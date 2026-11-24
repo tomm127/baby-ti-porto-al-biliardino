@@ -1,4 +1,6 @@
+import { useBtpbUiLanguage } from './lib/btpbUiText.ts';
 import { useEffect, useState } from 'react';
+import { LanguageProvider } from './lib/i18n.tsx';
 import { AdminPage } from './pages/AdminPage.tsx';
 import { LandingPage } from './pages/LandingPage.tsx';
 import { PlayerPage } from './pages/PlayerPage.tsx';
@@ -14,6 +16,11 @@ function safeDecodePathPart(value: string) {
 }
 
 export function App() {
+  useBtpbUiLanguage();
+  return <LanguageProvider><RoutedPage /></LanguageProvider>;
+}
+
+function RoutedPage() {
   const [path, setPath] = useState(window.location.pathname);
 
   useEffect(() => {

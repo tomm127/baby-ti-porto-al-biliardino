@@ -1,3 +1,4 @@
+import { btpbText, useBtpbUiLanguage, btpbError } from '../lib/btpbUiText.ts';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { calculateStandings, matchesAheadForTeam, type PlayedMatch, type Team as EngineTeam } from '../domain/index.ts';
 import {
@@ -22,6 +23,7 @@ import { KnockoutBracket } from '../components/KnockoutBracket.tsx';
 import { useConnectivity } from '../lib/useConnectivity.ts';
 import { ConnectionBanner } from '../components/ConnectionBanner.tsx';
 import { TeamLabel } from '../components/TeamLabel.tsx';
+import { LanguagePreferenceRow } from '../components/LanguageSwitch.tsx';
 import { playBtpbCountdownBeep, playBtpbTimerEndAlarm, primeBtpbAlertSound, unlockBtpbGameAudio } from '../lib/alertSound.ts';
 
 interface Props { slug: string; matchId?: string; }
@@ -30,6 +32,7 @@ type Tab = 'home' | 'gironi' | 'partite' | 'tabellone' | 'squadra';
 const LAST_PLAYER_TOURNAMENT_KEY = 'btpb:last-player-tournament';
 
 export function PlayerPage({ slug, matchId }: Props) {
+  useBtpbUiLanguage();
   if (matchId) return <MatchPage slug={slug} matchId={matchId} />;
   return <TournamentPlayerPage slug={slug} />;
 }
@@ -68,20 +71,20 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
     return () => window.clearInterval(id);
   }, [refresh, online]);
 
-  if (loading) return <CenteredMessage title="Caricamento torneo…" />;
-  if (error || !bundle) return <CenteredMessage title="Non riesco ad aprire il torneo" body={error} back />;
+  if (loading) return <CenteredMessage title={btpbText("Caricamento torneo…")} />;
+  if (error || !bundle) return <CenteredMessage title={btpbText("Non riesco ad aprire il torneo")} body={btpbError(error)} back />;
   if (!teamId) return <><ConnectionBanner online={online} cachedAt={cachedAt} /><TeamChooser bundle={bundle} onChosen={refresh} />{bundle.settings.emergency_paused && <TournamentPausedOverlay />}</>;
 
   const team = bundle.teams.find((t) => t.id === teamId);
-  if (!team) return <CenteredMessage title="Squadra non trovata" body="Cambia associazione del dispositivo." back />;
+  if (!team) return <CenteredMessage title={btpbText("Squadra non trovata")} body={btpbText("Cambia associazione del dispositivo.")} back />;
 
   return (
     <main className="app-shell">
       {bundle.settings.emergency_paused && <TournamentPausedOverlay />}
       <header className="app-header">
-        <button className="icon-button" aria-label="Cambia torneo" onClick={() => { window.localStorage.removeItem(LAST_PLAYER_TOURNAMENT_KEY); navigate('/?choose=1'); }}>←</button>
+        <button className="icon-button" aria-label={btpbText("Cambia torneo")} onClick={() => { window.localStorage.removeItem(LAST_PLAYER_TOURNAMENT_KEY); navigate('/?choose=1'); }}>←</button>
         <div><strong>Baby Ti Porto al Biliardino</strong><span>{bundle.tournament.name}</span></div>
-        <div className={online && !cachedAt ? 'status-dot' : 'status-dot offline'} title={online && !cachedAt ? 'online' : 'dati non aggiornati'} />
+        <div className={online && !cachedAt ? 'status-dot' : 'status-dot offline'} title={online && !cachedAt ? 'online' : btpbText("dati non aggiornati")} />
       </header>
 
       <section className="content">
@@ -89,16 +92,16 @@ function TournamentPlayerPage({ slug }: { slug: string }) {
         {tab === 'home' && <PlayerHome bundle={bundle} teamId={teamId} />}
         {tab === 'gironi' && <GroupsView bundle={bundle} highlightTeamId={teamId} />}
         {tab === 'partite' && <AllMatchesView bundle={bundle} />}
-        {tab === 'tabellone' && <section className="panel bracket-player-panel"><div className="panel-title"><h2>Tabellone</h2><span>{bundle.tournament.phase === 'groups' ? 'dopo i gironi' : 'eliminazione diretta'}</span></div><KnockoutBracket bundle={bundle} /></section>}
+        {tab === 'tabellone' && <section className="panel bracket-player-panel"><div className="panel-title"><h2>{btpbText("Tabellone")}</h2><span>{bundle.tournament.phase === 'groups' ? btpbText("dopo i gironi") : btpbText("eliminazione diretta")}</span></div><KnockoutBracket bundle={bundle} /></section>}
         {tab === 'squadra' && <MyTeam bundle={bundle} teamId={teamId} onChanged={refresh} />}
       </section>
 
       <nav className="bottom-nav">
         <Nav active={tab === 'home'} onClick={() => setTab('home')} label="Home" icon="⌂" />
-        <Nav active={tab === 'gironi'} onClick={() => setTab('gironi')} label="Gironi" icon="≡" />
-        <Nav active={tab === 'partite'} onClick={() => setTab('partite')} label="Partite" icon="◫" />
-        <Nav active={tab === 'tabellone'} onClick={() => setTab('tabellone')} label="Tabellone" icon="◇" />
-        <Nav active={tab === 'squadra'} onClick={() => setTab('squadra')} label="Squadra" icon="●" />
+        <Nav active={tab === 'gironi'} onClick={() => setTab('gironi')} label={btpbText("Gironi")} icon="≡" />
+        <Nav active={tab === 'partite'} onClick={() => setTab('partite')} label={btpbText("Partite")} icon="◫" />
+        <Nav active={tab === 'tabellone'} onClick={() => setTab('tabellone')} label={btpbText("Tabellone")} icon="◇" />
+        <Nav active={tab === 'squadra'} onClick={() => setTab('squadra')} label={btpbText("Squadra")} icon="●" />
       </nav>
     </main>
   );
@@ -116,7 +119,7 @@ function SearchableTeamPicker({
   teams,
   selectedId,
   onSelect,
-  placeholder = 'Scrivi il nome della squadra',
+  placeholder = btpbText("Scrivi il nome della squadra"),
 }: {
   teams: TournamentBundle['teams'];
   selectedId: string;
@@ -206,7 +209,7 @@ function SearchableTeamPicker({
       >
         <span className="team-search-option-name">{team.avatar_url && <img src={team.avatar_url} alt="" />}<span>{team.name}</span></span>
         {team.id === selectedId && <strong>✓</strong>}
-      </button>) : <div className="team-search-empty">Nessuna squadra trovata</div>}
+      </button>) : <div className="team-search-empty">{btpbText("Nessuna squadra trovata")}</div>}
     </div>}
   </div>;
 }
@@ -230,15 +233,15 @@ function TeamChooser({ bundle, onChosen }: { bundle: TournamentBundle; onChosen:
   }
 
   return <main className="page page-centered"><section className="login-card team-chooser">
-    <button className="text-button" onClick={() => navigate('/')}>← Tornei</button>
-    <div className="eyebrow">{bundle.tournament.name}</div><h1>Qual è la tua squadra?</h1>
-    <p className="lead small">Scrivi il nome della squadra oppure sceglila dai suggerimenti. All'inizio vengono mostrate tutte le squadre disponibili.</p>
-    <label>Squadra</label>
+    <button className="text-button" onClick={() => navigate('/')}>{btpbText("← Tornei")}</button>
+    <div className="eyebrow">{bundle.tournament.name}</div><h1>{btpbText("Qual è la tua squadra?")}</h1>
+    <p className="lead small">{btpbText("Scrivi il nome della squadra oppure sceglila dai suggerimenti. All'inizio vengono mostrate tutte le squadre disponibili.")}</p>
+    <label>{btpbText("Squadra")}</label>
     <SearchableTeamPicker teams={bundle.teams.filter((team) => bundle.groupTeams.some((membership) => membership.team_id === team.id))} selectedId={selected} onSelect={(teamId) => { setSelected(teamId); setPin(''); }} />
-    {bundle.settings.team_pin_enabled && selected && <><label>PIN squadra</label><input inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" /></>}
-    {error && <div className="alert error">{error}</div>}
-    {!online && <div className="alert warning">Per associare questo dispositivo a una squadra serve la connessione.</div>}
-    <button className="button primary" disabled={busy || !selected || !online} onClick={() => void choose()}>{busy ? 'Associazione…' : 'Questa è la mia squadra'}</button>
+    {bundle.settings.team_pin_enabled && selected && <><label>{btpbText("PIN squadra")}</label><input inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="PIN" /></>}
+    {error && <div className="alert error">{btpbError(error)}</div>}
+    {!online && <div className="alert warning">{btpbText("Per associare questo dispositivo a una squadra serve la connessione.")}</div>}
+    <button className="button primary" disabled={busy || !selected || !online} onClick={() => void choose()}>{busy ? btpbText("Associazione…") : btpbText("Questa è la mia squadra")}</button>
   </section></main>;
 }
 
@@ -282,27 +285,27 @@ function PlayerHome({ bundle, teamId }: { bundle: TournamentBundle; teamId: stri
 
   let nextCard: ReactNode;
   if (!next) {
-    nextCard = <section className="next-card"><div className="eyebrow">PROSSIMA PARTITA</div><h2>Nessuna partita in coda</h2><p className="muted-on-dark">Il calendario potrebbe essere concluso o non ancora avviato.</p></section>;
+    nextCard = <section className="next-card"><div className="eyebrow">{btpbText("PROSSIMA PARTITA")}</div><h2>{btpbText("Nessuna partita in coda")}</h2><p className="muted-on-dark">{btpbText("Il calendario potrebbe essere concluso o non ancora avviato.")}</p></section>;
   } else {
     const opponentId = next.team1_id === teamId ? next.team2_id : next.team1_id;
     const opponent = teamName(bundle, opponentId);
     const field = bundle.fields.find((f) => f.id === next.field_id)?.name;
     const liveNow = ['called', 'ready', 'playing', 'awaiting_result'].includes(next.status);
     nextCard = <section className={liveNow ? 'next-card urgent' : 'next-card'} onClick={() => liveNow && navigate(`/tournament/${bundle.tournament.slug}/match/${next.id}`)} role={liveNow ? 'button' : undefined}>
-      <div className="eyebrow">{liveNow ? 'È IL VOSTRO TURNO' : 'PROSSIMA PARTITA'}</div>
+      <div className="eyebrow">{liveNow ? btpbText("È IL VOSTRO TURNO") : btpbText("PROSSIMA PARTITA")}</div>
       <div className="versus"><strong><TeamLabel bundle={bundle} teamId={teamId} name={team.name} /></strong><span>VS</span><strong><TeamLabel bundle={bundle} teamId={opponentId} name={opponent} /></strong></div>
-      <div className={liveNow ? 'ahead-hero live-turn' : 'ahead-hero'}>{!liveNow && ahead > 0 && <small className="ahead-queue-label">CODA</small>}<strong>{liveNow ? 'TOCCA A VOI' : ahead === 0 ? 'PROSSIMI' : ahead}</strong><span>{liveNow ? (field ? `VAI AL ${field.toUpperCase()}` : 'CAMPO DA ASSEGNARE') : ahead === 0 ? 'SIETE I PROSSIMI' : `${ahead === 1 ? 'PARTITA' : 'PARTITE'} PRIMA DI VOI`}</span>{!liveNow && <small className="ahead-fields-note">Considera che ci sono {activeFieldCount} {activeFieldCount === 1 ? 'campo' : 'campi'}</small>}</div>
-      {!liveNow && <div className="next-field">{field ?? 'Campo da assegnare'}</div>}
-      {liveNow && <div className="tap-hint">INIZIA PARTITA →</div>}
+      <div className={liveNow ? 'ahead-hero live-turn' : 'ahead-hero'}>{!liveNow && ahead > 0 && <small className="ahead-queue-label">{btpbText("CODA")}</small>}<strong>{liveNow ? btpbText("TOCCA A VOI") : ahead === 0 ? btpbText("PROSSIMI") : ahead}</strong><span>{liveNow ? (field ? `${btpbText("VAI AL ")}${field.toUpperCase()}` : btpbText("CAMPO DA ASSEGNARE")) : ahead === 0 ? btpbText("SIETE I PROSSIMI") : `${ahead === 1 ? btpbText("PARTITA") : btpbText("PARTITE")}${btpbText(" PRIMA DI VOI")}`}</span>{!liveNow && <small className="ahead-fields-note">{btpbText("Considera che ci sono ")}{activeFieldCount} {activeFieldCount === 1 ? btpbText("campo") : btpbText("campi")}</small>}</div>
+      {!liveNow && <div className="next-field">{field ?? btpbText("Campo da assegnare")}</div>}
+      {liveNow && <div className="tap-hint">{btpbText("INIZIA PARTITA →")}</div>}
     </section>;
   }
 
   return <>
-    <section className="team-hero"><span>LA TUA SQUADRA</span><h1><TeamLabel bundle={bundle} teamId={teamId} name={team.name} /></h1>{groupName && <div><small>{groupName}</small></div>}</section>
+    <section className="team-hero"><span>{btpbText("LA TUA SQUADRA")}</span><h1><TeamLabel bundle={bundle} teamId={teamId} name={team.name} /></h1>{groupName && <div><small>{groupName}</small></div>}</section>
     {nextCard}
-    <section className="player-stats"><div><strong>{playedCount}</strong><span>Giocate</span></div><div><strong>{remainingCount}</strong><span>Da giocare</span></div><div><strong>{points}</strong><span>Punti</span></div><div><strong>{position ? `#${position}` : '–'}</strong><span>Posizione</span></div></section>
+    <section className="player-stats"><div><strong>{playedCount}</strong><span>{btpbText("Giocate")}</span></div><div><strong>{remainingCount}</strong><span>{btpbText("Da giocare")}</span></div><div><strong>{points}</strong><span>{btpbText("Punti")}</span></div><div><strong>{position ? `#${position}` : '–'}</strong><span>{btpbText("Posizione")}</span></div></section>
     <NotificationControls tournamentId={bundle.tournament.id} />
-    <section className="panel player-own-matches"><div className="panel-title"><h2>Le tue partite</h2><span>{ownTimeline.length}</span></div><div className="player-match-list">{ownTimeline.length === 0 && <div className="empty-state">Nessuna partita ancora programmata.</div>}{ownTimeline.map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div></section>
+    <section className="panel player-own-matches"><div className="panel-title"><h2>{btpbText("Le tue partite")}</h2><span>{ownTimeline.length}</span></div><div className="player-match-list">{ownTimeline.length === 0 && <div className="empty-state">{btpbText("Nessuna partita ancora programmata.")}</div>}{ownTimeline.map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div></section>
   </>;
 }
 
@@ -336,19 +339,19 @@ function NotificationControls({ tournamentId }: { tournamentId: string }) {
   if (state === 'enabled') return null;
 
   return <section className="notice-card notification-card">
-    <div><strong>Avvisi 🔔</strong>
-      {state === 'default' && <span>Attiva gli avvisi per sapere quando manca una partita e quando dovete andare al campo.</span>}
-      {state === 'disabled' && <span>Le notifiche sono consentite, ma questo dispositivo non è più registrato.</span>}
-      {state === 'denied' && <span>Le notifiche sono bloccate nelle impostazioni del browser/dispositivo.</span>}
-      {state === 'needs-install' && <span>Su iPhone/iPad installa prima la web app sulla schermata Home, poi aprila dall’icona.</span>}
-      {state === 'unsupported' && <span>Questo browser non supporta le notifiche push web.</span>}
+    <div><strong>{btpbText("Avvisi 🔔")}</strong>
+      {state === 'default' && <span>{btpbText("Attiva gli avvisi per sapere quando manca una partita e quando dovete andare al campo.")}</span>}
+      {state === 'disabled' && <span>{btpbText("Le notifiche sono consentite, ma questo dispositivo non è più registrato.")}</span>}
+      {state === 'denied' && <span>{btpbText("Le notifiche sono bloccate nelle impostazioni del browser/dispositivo.")}</span>}
+      {state === 'needs-install' && <span>{btpbText("Su iPhone/iPad installa prima la web app sulla schermata Home, poi aprila dall’icona.")}</span>}
+      {state === 'unsupported' && <span>{btpbText("Questo browser non supporta le notifiche push web.")}</span>}
     </div>
     <div className="notification-actions">
-      {pwa.canPromptInstall && <button className="button secondary" disabled={busy} onClick={() => void pwa.install()}>Installa app</button>}
-      {pwa.needsIOSManualInstall && state === 'needs-install' && <span className="ios-install-hint">Condividi ↑ → Aggiungi alla schermata Home</span>}
-      {(state === 'default' || state === 'disabled') && <button className="button primary" disabled={busy} onClick={() => void enable()}>{busy ? 'Attivazione…' : 'Attiva notifiche'}</button>}
+      {pwa.canPromptInstall && <button className="button secondary" disabled={busy} onClick={() => void pwa.install()}>{btpbText("Installa app")}</button>}
+      {pwa.needsIOSManualInstall && state === 'needs-install' && <span className="ios-install-hint">{btpbText("Condividi ↑ → Aggiungi alla schermata Home")}</span>}
+      {(state === 'default' || state === 'disabled') && <button className="button primary" disabled={busy} onClick={() => void enable()}>{busy ? btpbText("Attivazione…") : btpbText("Attiva notifiche")}</button>}
     </div>
-    {error && <div className="alert error">{error}</div>}
+    {error && <div className="alert error">{btpbError(error)}</div>}
   </section>;
 }
 
@@ -362,9 +365,9 @@ function GroupsView({ bundle, highlightTeamId }: { bundle: TournamentBundle; hig
     const rows = calculateStandings(teams, played);
     const open = openGroupId === group.id;
     return <section className="panel group-card-v2" key={group.id}>
-      <button className="group-card-heading" onClick={() => setOpenGroupId(open ? null : group.id)}><div><h2>{group.name}</h2><span>{memberships.length} squadre</span></div><strong>{open ? '−' : '+'}</strong></button>
-      <div className="group-table-scroll"><div className="group-table-wide"><div className="group-wide-row header"><span>#</span><strong>Squadra</strong><span>PT</span><span>G</span><span>Da giocare</span><span>DR</span></div>{rows.map((r,i) => { const toPlay = groupMatches.filter((m) => [m.team1_id,m.team2_id].includes(r.teamId) && !['finished','forfeit','cancelled'].includes(m.status)).length; return <div className={r.teamId === highlightTeamId ? 'group-wide-row highlighted' : 'group-wide-row'} key={r.teamId}><span>{i+1}</span><strong><TeamLabel bundle={bundle} teamId={r.teamId} name={r.teamName} /></strong><span>{r.points}</span><span>{r.played}</span><span>{toPlay}</span><span>{signed(r.goalDifference)}</span></div>; })}</div></div>
-      {open && <div className="group-match-detail"><h3>Tutte le partite</h3>{groupMatches.slice().sort(matchOrder).map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div>}
+      <button className="group-card-heading" onClick={() => setOpenGroupId(open ? null : group.id)}><div><h2>{group.name}</h2><span>{memberships.length}{btpbText(" squadre")}</span></div><strong>{open ? '−' : '+'}</strong></button>
+      <div className="group-table-scroll"><div className="group-table-wide"><div className="group-wide-row header"><span>#</span><strong>{btpbText("Squadra")}</strong><span>{btpbText("PT")}</span><span>G</span><span>{btpbText("Da giocare")}</span><span>{btpbText("DR")}</span></div>{rows.map((r,i) => { const toPlay = groupMatches.filter((m) => [m.team1_id,m.team2_id].includes(r.teamId) && !['finished','forfeit','cancelled'].includes(m.status)).length; return <div className={r.teamId === highlightTeamId ? 'group-wide-row highlighted' : 'group-wide-row'} key={r.teamId}><span>{i+1}</span><strong><TeamLabel bundle={bundle} teamId={r.teamId} name={r.teamName} /></strong><span>{r.points}</span><span>{r.played}</span><span>{toPlay}</span><span>{signed(r.goalDifference)}</span></div>; })}</div></div>
+      {open && <div className="group-match-detail"><h3>{btpbText("Tutte le partite")}</h3>{groupMatches.slice().sort(matchOrder).map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div>}
     </section>;
   })}</div>;
 }
@@ -381,17 +384,17 @@ function AllMatchesView({ bundle }: { bundle: TournamentBundle }) {
   }, []);
 
   function liveFieldClock(match: MatchRow) {
-    if (match.status === 'called' || match.status === 'ready') return 'PRONTA';
+    if (match.status === 'called' || match.status === 'ready') return btpbText("PRONTA");
 
     if (match.status === 'playing') {
       const countdown = countdownRemaining(match.started_at);
-      if (countdown > 0) return 'PRONTA';
-      if (match.duration_seconds == null) return 'IN CORSO';
+      if (countdown > 0) return btpbText("PRONTA");
+      if (match.duration_seconds == null) return btpbText("IN CORSO");
       return formatClock(secondsRemaining(match));
     }
 
     if (match.status === 'awaiting_result') {
-      return match.duration_seconds == null ? 'IN CORSO' : '00:00';
+      return match.duration_seconds == null ? btpbText("IN CORSO") : '00:00';
     }
 
     return '';
@@ -403,8 +406,8 @@ function AllMatchesView({ bundle }: { bundle: TournamentBundle }) {
   const source = mode === 'past' ? past : future;
   const filtered = source.filter((m) => !normalized || normalizeTextSearch(`${teamName(bundle,m.team1_id)} ${teamName(bundle,m.team2_id)} ${matchStageLabel(bundle,m)}`).includes(normalized));
   return <div className="matches-page-v2">
-    <section className="live-fields-section"><div className="section-heading-v2"><div><span>LIVE</span><h2>Campi</h2></div><small>{activeFields.length} attivi</small></div><div className="player-live-fields">{activeFields.map((field) => { const match = bundle.matches.find((m) => m.field_id === field.id && liveStatuses.includes(m.status)); return <article className={match ? 'player-live-field active' : 'player-live-field'} key={field.id}><span>{field.name}</span>{match ? <><div className="player-live-field-teams"><strong><TeamLabel bundle={bundle} teamId={match.team1_id} /></strong><small>VS</small><strong><TeamLabel bundle={bundle} teamId={match.team2_id} /></strong></div><div className="player-live-field-clock">{liveFieldClock(match)}</div></> : <div className="field-free-player">LIBERO</div>}</article>; })}</div></section>
-    <section className="panel all-matches-panel"><div className="matches-toolbar"><div className="segmented-control"><button className={mode === 'past' ? 'active' : ''} onClick={() => setMode('past')}>Passate</button><button className={mode === 'future' ? 'active' : ''} onClick={() => setMode('future')}>Future</button></div><div className="match-search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cerca squadra o girone" /></div></div><div className="player-match-list global">{filtered.length === 0 && <div className="empty-state">Nessuna partita trovata.</div>}{filtered.map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div></section>
+    <section className="live-fields-section"><div className="section-heading-v2"><div><span>LIVE</span><h2>{btpbText("Campi")}</h2></div><small>{activeFields.length}{btpbText(" attivi")}</small></div><div className="player-live-fields">{activeFields.map((field) => { const match = bundle.matches.find((m) => m.field_id === field.id && liveStatuses.includes(m.status)); return <article className={match ? 'player-live-field active' : 'player-live-field'} key={field.id}><span>{field.name}</span>{match ? <><div className="player-live-field-teams"><strong><TeamLabel bundle={bundle} teamId={match.team1_id} /></strong><small>VS</small><strong><TeamLabel bundle={bundle} teamId={match.team2_id} /></strong></div><div className="player-live-field-clock">{liveFieldClock(match)}</div></> : <div className="field-free-player">{btpbText("LIBERO")}</div>}</article>; })}</div></section>
+    <section className="panel all-matches-panel"><div className="matches-toolbar"><div className="segmented-control"><button className={mode === 'past' ? 'active' : ''} onClick={() => setMode('past')}>{btpbText("Passate")}</button><button className={mode === 'future' ? 'active' : ''} onClick={() => setMode('future')}>{btpbText("Future")}</button></div><div className="match-search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={btpbText("Cerca squadra o girone")} /></div></div><div className="player-match-list global">{filtered.length === 0 && <div className="empty-state">{btpbText("Nessuna partita trovata.")}</div>}{filtered.map((m) => <PlayerMatchListRow key={m.id} bundle={bundle} match={m} />)}</div></section>
   </div>;
 }
 
@@ -434,14 +437,15 @@ function MyTeam({ bundle, teamId, onChanged }: { bundle: TournamentBundle; teamI
     try { await leaveTeam(bundle.tournament.id); window.localStorage.removeItem(LAST_PLAYER_TOURNAMENT_KEY); await onChanged(); }
     finally { setBusy(false); }
   }
-  return <section className="panel form-panel my-team-v2"><div className="eyebrow">SQUADRA ASSOCIATA</div><h2><TeamLabel bundle={bundle} teamId={teamId} name={currentTeam} /></h2><p className="hint">Per cambiare squadra cercane un'altra qui sotto e conferma.</p><label>Nuova squadra</label><SearchableTeamPicker teams={bundle.teams.filter((team) => bundle.groupTeams.some((membership) => membership.team_id === team.id))} selectedId={newTeamId} onSelect={(id) => { setNewTeamId(id); setPin(''); }} placeholder="Cerca la nuova squadra" />{bundle.settings.team_pin_enabled && newTeamId && newTeamId !== teamId && <><label>PIN nuova squadra</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{error}</div>}<button className="button primary" disabled={busy || !online || !newTeamId || newTeamId === teamId} onClick={() => void change()}>Cambia squadra</button><button className="button ghost" disabled={busy || !online} onClick={() => void remove()}>Dissocia questo dispositivo</button>{teamChangeSuccess && <div className="team-change-feedback-backdrop">
+  return <section className="panel form-panel my-team-v2"><div className="eyebrow">{btpbText("SQUADRA ASSOCIATA")}</div><h2><TeamLabel bundle={bundle} teamId={teamId} name={currentTeam} /></h2><p className="hint">{btpbText("Per cambiare squadra cercane un'altra qui sotto e conferma.")}</p><label>{btpbText("Nuova squadra")}</label><SearchableTeamPicker teams={bundle.teams.filter((team) => bundle.groupTeams.some((membership) => membership.team_id === team.id))} selectedId={newTeamId} onSelect={(id) => { setNewTeamId(id); setPin(''); }} placeholder={btpbText("Cerca la nuova squadra")} />{bundle.settings.team_pin_enabled && newTeamId && newTeamId !== teamId && <><label>{btpbText("PIN nuova squadra")}</label><input value={pin} inputMode="numeric" onChange={(e) => setPin(e.target.value)} /></>}{error && <div className="alert error">{btpbError(error)}</div>}<button className="button primary" disabled={busy || !online || !newTeamId || newTeamId === teamId} onClick={() => void change()}>{btpbText("Cambia squadra")}</button><button className="button ghost" disabled={busy || !online} onClick={() => void remove()}>{btpbText("Dissocia questo dispositivo")}</button>{teamChangeSuccess && <div className="team-change-feedback-backdrop">
     <div className="team-change-feedback" role="dialog" aria-modal="true" aria-labelledby="team-change-feedback-title">
       <div className="team-change-feedback-check">✓</div>
-      <h3 id="team-change-feedback-title">Squadra cambiata</h3>
-      <p>Questo telefono ora è associato a <strong>{teamChangeSuccess}</strong>.</p>
+      <h3 id="team-change-feedback-title">{btpbText("Squadra cambiata")}</h3>
+      <p>{btpbText("Questo telefono ora è associato a ")}<strong>{teamChangeSuccess}</strong>.</p>
       <button className="button primary" autoFocus onClick={() => setTeamChangeSuccess(null)}>OK</button>
     </div>
-  </div>}</section>;
+  </div>}
+  <LanguagePreferenceRow /></section>;
 }
 
 function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
@@ -495,8 +499,8 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
   function showSystemEndNotification() {
     if (!('Notification' in window) || Notification.permission !== 'granted' || !('serviceWorker' in navigator)) return;
 
-    void navigator.serviceWorker.ready.then((registration) => registration.showNotification('TEMPO FINITO', {
-      body: 'Partita terminata. Inserite il risultato.',
+    void navigator.serviceWorker.ready.then((registration) => registration.showNotification(btpbText("TEMPO FINITO"), {
+      body: btpbText("Partita terminata. Inserite il risultato."),
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-96.png',
       tag: `btpb-timer-end-${matchId}`,
@@ -610,13 +614,13 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
       .finally(() => { expiring.current = false; });
   }, [tick, online, match, remaining, countdown, refresh, bundle?.settings.emergency_paused]);
 
-  if (error && !bundle) return <CenteredMessage title="Errore partita" body={error} back />;
-  if (!bundle || !match) return <CenteredMessage title="Caricamento partita…" />;
-  if (!teamId || ![match.team1_id, match.team2_id].includes(teamId)) return <CenteredMessage title="Questa non è la tua partita" body="Solo i dispositivi associati alle due squadre e l'admin possono controllarla." back />;
+  if (error && !bundle) return <CenteredMessage title={btpbText("Errore partita")} body={btpbError(error)} back />;
+  if (!bundle || !match) return <CenteredMessage title={btpbText("Caricamento partita…")} />;
+  if (!teamId || ![match.team1_id, match.team2_id].includes(teamId)) return <CenteredMessage title={btpbText("Questa non è la tua partita")} body={btpbText("Solo i dispositivi associati alle due squadre e l'admin possono controllarla.")} back />;
 
   const resolvedMatchId = match.id;
   const a = teamName(bundle, match.team1_id), b = teamName(bundle, match.team2_id);
-  const field = bundle.fields.find((f) => f.id === match.field_id)?.name ?? 'Campo';
+  const field = bundle.fields.find((f) => f.id === match.field_id)?.name ?? btpbText("Campo");
 
   async function action(fn: () => Promise<unknown>) {
     setBusy(true); setError('');
@@ -673,7 +677,7 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
       className="match-end-flash"
       role="button"
       tabIndex={0}
-      aria-label="Tempo finito. Tocca per inserire il punteggio."
+      aria-label={btpbText("Tempo finito. Tocca per inserire il punteggio.")}
       aria-live="assertive"
       onClick={() => void openScoreEntryFromEndAlert()}
       onKeyDown={(event) => {
@@ -683,42 +687,42 @@ function MatchPage({ slug, matchId }: { slug: string; matchId: string }) {
         }
       }}
     >
-      <strong>TEMPO FINITO</strong>
-      <span>PARTITA TERMINATA</span>
-      <small>TOCCA PER INSERIRE IL PUNTEGGIO</small>
+      <strong>{btpbText("TEMPO FINITO")}</strong>
+      <span>{btpbText("PARTITA TERMINATA")}</span>
+      <small>{btpbText("TOCCA PER INSERIRE IL PUNTEGGIO")}</small>
     </div>}
     <ConnectionBanner online={online} cachedAt={cachedAt} />
     <header className="match-top"><button className="icon-button light" onClick={() => navigate(`/tournament/${slug}`)}>←</button><div><span>{bundle.tournament.name}</span><strong>{field}</strong></div></header>
     <section className="match-stage">
       <div className="match-team-names"><strong><TeamLabel bundle={bundle} teamId={match.team1_id} name={a} /></strong><span>VS</span><strong><TeamLabel bundle={bundle} teamId={match.team2_id} name={b} /></strong></div>
-      {match.status === 'playing' && countdown > 0 && <div className="countdown"><span>{countdown}</span><small>PREPARATEVI</small></div>}
-      {match.status === 'playing' && countdown === 0 && <><div className="match-clock">{match.duration_seconds == null ? 'IN CORSO' : formatClock(remaining)}</div>{match.goal_target && <div className="target-label">Primo a {match.goal_target} · oppure fine tempo</div>}{!online && remaining === 0 && <div className="offline-match-note">Tempo terminato. Continuate a giocare: appena torna la connessione passeremo automaticamente all'inserimento del risultato.</div>}</>}
-      {['called','ready'].includes(match.status) && <><div className="waiting-title">Siete sul campo.</div><button className="giant-button" disabled={busy || !online} onClick={() => void action(() => startPlayerMatch(match.id))}>AVVIA PARTITA</button></>}
-      {match.status === 'playing' && countdown === 0 && <div className="match-controls">{match.pause_allowed && (match.paused_at ? <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => resumeMatch(match.id))}>Riprendi</button> : <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => pauseMatch(match.id))}>Pausa</button>)}<button className="danger-soft" disabled={busy || !online || confirmEnd} onClick={() => setConfirmEnd(true)}>Termina partita</button></div>}
-      {confirmEnd && match.status === 'playing' && <div className="confirm-result end-match-confirm"><strong>Concludere la partita?</strong><p>La partita verrà chiusa e si passerà all’inserimento del risultato.</p><div><button disabled={busy} onClick={() => setConfirmEnd(false)}>Continua a giocare</button><button className="confirm end-confirm-button" disabled={busy || !online} onClick={() => { setConfirmEnd(false); void action(() => endMatchEarly(match.id)); }}>CONCLUDI PARTITA</button></div></div>}
-      {match.status === 'awaiting_result' && <section className="score-entry"><div className="eyebrow light-text">PARTITA TERMINATA</div>{match.stage !== 'group' && <p>Se eravate pari allo scadere, continuate a giocare il <strong>golden goal</strong>. Poi inserite il risultato finale.</p>}<div className="score-inputs"><label><span><TeamLabel bundle={bundle} teamId={match.team1_id} name={a} /></span><input type="number" min="0" inputMode="numeric" value={score1} onChange={(e) => { setScore1(e.target.value); setConfirming(false); }} /></label><strong>–</strong><label><span><TeamLabel bundle={bundle} teamId={match.team2_id} name={b} /></span><input type="number" min="0" inputMode="numeric" value={score2} onChange={(e) => { setScore2(e.target.value); setConfirming(false); }} /></label></div>{!confirming ? <button className="giant-button" disabled={!online} onClick={() => setConfirming(true)}>Controlla risultato</button> : <div className="confirm-result"><strong>Confermi {a} {score1 || '0'} – {score2 || '0'} {b}?</strong><p>Dopo la conferma solo l'admin potrà modificarlo.</p><div><button onClick={() => setConfirming(false)}>Indietro</button><button className="confirm" disabled={busy || !online} onClick={() => void submit()}>CONFERMA</button></div></div>}</section>}
-      {['finished','forfeit'].includes(match.status) && <section className="finished-result"><div className="eyebrow light-text">RISULTATO REGISTRATO</div><div>{match.score_team1} <span>–</span> {match.score_team2}</div><button onClick={() => navigate(`/tournament/${slug}`)}>Torna al torneo</button></section>}
-      {error && <div className="alert error match-error">{error}</div>}
+      {match.status === 'playing' && countdown > 0 && <div className="countdown"><span>{countdown}</span><small>{btpbText("PREPARATEVI")}</small></div>}
+      {match.status === 'playing' && countdown === 0 && <><div className="match-clock">{match.duration_seconds == null ? btpbText("IN CORSO") : formatClock(remaining)}</div>{match.goal_target && <div className="target-label">{btpbText("Primo a ")}{match.goal_target}{btpbText(" · oppure fine tempo")}</div>}{!online && remaining === 0 && <div className="offline-match-note">{btpbText("Tempo terminato. Continuate a giocare: appena torna la connessione passeremo automaticamente all'inserimento del risultato.")}</div>}</>}
+      {['called','ready'].includes(match.status) && <><div className="waiting-title">{btpbText("Siete sul campo.")}</div><button className="giant-button" disabled={busy || !online} onClick={() => void action(() => startPlayerMatch(match.id))}>{btpbText("AVVIA PARTITA")}</button></>}
+      {match.status === 'playing' && countdown === 0 && <div className="match-controls">{match.pause_allowed && (match.paused_at ? <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => resumeMatch(match.id))}>{btpbText("Riprendi")}</button> : <button disabled={busy || !online || confirmEnd} onClick={() => void action(() => pauseMatch(match.id))}>{btpbText("Pausa")}</button>)}<button className="danger-soft" disabled={busy || !online || confirmEnd} onClick={() => setConfirmEnd(true)}>{btpbText("Termina partita")}</button></div>}
+      {confirmEnd && match.status === 'playing' && <div className="confirm-result end-match-confirm"><strong>{btpbText("Concludere la partita?")}</strong><p>{btpbText("La partita verrà chiusa e si passerà all’inserimento del risultato.")}</p><div><button disabled={busy} onClick={() => setConfirmEnd(false)}>{btpbText("Continua a giocare")}</button><button className="confirm end-confirm-button" disabled={busy || !online} onClick={() => { setConfirmEnd(false); void action(() => endMatchEarly(match.id)); }}>{btpbText("CONCLUDI PARTITA")}</button></div></div>}
+      {match.status === 'awaiting_result' && <section className="score-entry"><div className="eyebrow light-text">{btpbText("PARTITA TERMINATA")}</div>{match.stage !== 'group' && <p>{btpbText("Se eravate pari allo scadere, continuate a giocare il ")}<strong>golden goal</strong>{btpbText(". Poi inserite il risultato finale.")}</p>}<div className="score-inputs"><label><span><TeamLabel bundle={bundle} teamId={match.team1_id} name={a} /></span><input type="number" min="0" inputMode="numeric" value={score1} onChange={(e) => { setScore1(e.target.value); setConfirming(false); }} /></label><strong>–</strong><label><span><TeamLabel bundle={bundle} teamId={match.team2_id} name={b} /></span><input type="number" min="0" inputMode="numeric" value={score2} onChange={(e) => { setScore2(e.target.value); setConfirming(false); }} /></label></div>{!confirming ? <button className="giant-button" disabled={!online} onClick={() => setConfirming(true)}>{btpbText("Controlla risultato")}</button> : <div className="confirm-result"><strong>{btpbText("Confermi ")}{a} {score1 || '0'} – {score2 || '0'} {b}?</strong><p>{btpbText("Dopo la conferma solo l'admin potrà modificarlo.")}</p><div><button onClick={() => setConfirming(false)}>{btpbText("Indietro")}</button><button className="confirm" disabled={busy || !online} onClick={() => void submit()}>{btpbText("CONFERMA")}</button></div></div>}</section>}
+      {['finished','forfeit'].includes(match.status) && <section className="finished-result"><div className="eyebrow light-text">{btpbText("RISULTATO REGISTRATO")}</div><div>{match.score_team1} <span>–</span> {match.score_team2}</div><button onClick={() => navigate(`/tournament/${slug}`)}>{btpbText("Torna al torneo")}</button></section>}
+      {error && <div className="alert error match-error">{btpbError(error)}</div>}
     </section>
   </main>;
 }
 
 function TournamentPausedOverlay({ dark = false }: { dark?: boolean }) {
   return <div className={dark ? 'tournament-paused-overlay dark' : 'tournament-paused-overlay'}>
-    <div><span>Ⅱ</span><strong>TORNEO IN PAUSA</strong><p>Attendere indicazioni dell'organizzazione.</p></div>
+    <div><span>Ⅱ</span><strong>{btpbText("TORNEO IN PAUSA")}</strong><p>{btpbText("Attendere indicazioni dell'organizzazione.")}</p></div>
   </div>;
 }
 
 function Nav({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: string }) { return <button className={active ? 'nav-item active' : 'nav-item'} onClick={onClick}><span>{icon}</span>{label}</button>; }
-function CenteredMessage({ title, body, back }: { title: string; body?: string; back?: boolean }) { return <main className="page page-centered"><section className="login-card">{back && <button className="text-button" onClick={() => navigate('/')}>← Indietro</button>}<h2>{title}</h2>{body && <p className="lead small">{body}</p>}</section></main>; }
-function teamName(bundle: TournamentBundle, id: string | null) { return bundle.teams.find((t) => t.id === id)?.name ?? 'Da definire'; }
+function CenteredMessage({ title, body, back }: { title: string; body?: string; back?: boolean }) { return <main className="page page-centered"><section className="login-card">{back && <button className="text-button" onClick={() => navigate('/')}>{btpbText("← Indietro")}</button>}<h2>{title}</h2>{body && <p className="lead small">{body}</p>}</section></main>; }
+function teamName(bundle: TournamentBundle, id: string | null) { return bundle.teams.find((t) => t.id === id)?.name ?? btpbText("Da definire"); }
 function signed(n: number) { return n > 0 ? `+${n}` : String(n); }
 function normalizeTextSearch(value: string) { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('it'); }
 function matchStageLabel(bundle: TournamentBundle, match: MatchRow) {
-  if (match.stage === 'group') return bundle.groups.find((g) => g.id === match.group_id)?.name ?? 'Girone';
-  if (match.stage === 'final') return 'Finale';
-  if (match.stage === 'third_place') return '3° / 4° posto';
-  return bundle.knockoutRounds.find((r) => r.id === match.knockout_round_id)?.name ?? 'Eliminazione';
+  if (match.stage === 'group') return bundle.groups.find((g) => g.id === match.group_id)?.name ?? btpbText("Girone");
+  if (match.stage === 'final') return btpbText("Finale");
+  if (match.stage === 'third_place') return btpbText("3° / 4° posto");
+  return btpbText(bundle.knockoutRounds.find((r) => r.id === match.knockout_round_id)?.name ?? "Eliminazione");
 }
 function matchOrder(a: MatchRow, b: MatchRow) { return (a.queue_position ?? a.sequence_number ?? 999999) - (b.queue_position ?? b.sequence_number ?? 999999); }
-function statusLabel(status: MatchRow['status']) { const labels: Record<MatchRow['status'], string> = { scheduled:'PROGRAMMATA',queued:'IN CODA',called:'TOCCA A VOI',ready:'PRONTA',playing:'IN CORSO',awaiting_result:'RISULTATO',finished:'FINITA',postponed:'RIMANDATA',cancelled:'ANNULLATA',forfeit:'TAVOLINO' }; return labels[status]; }
+function statusLabel(status: MatchRow['status']) { const labels: Record<MatchRow['status'], string> = { scheduled:btpbText("PROGRAMMATA"),queued:btpbText("IN CODA"),called:btpbText("TOCCA A VOI"),ready:btpbText("PRONTA"),playing:btpbText("IN CORSO"),awaiting_result:btpbText("RISULTATO"),finished:btpbText("FINITA"),postponed:btpbText("RIMANDATA"),cancelled:btpbText("ANNULLATA"),forfeit:btpbText("TAVOLINO") }; return labels[status]; }

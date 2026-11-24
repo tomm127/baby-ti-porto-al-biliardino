@@ -1,3 +1,4 @@
+import { btpbText, useBtpbUiLanguage } from '../lib/btpbUiText.ts';
 import type { TournamentBundle } from '../lib/api.ts';
 
 export function TeamLabel({
@@ -11,8 +12,9 @@ export function TeamLabel({
   name?: string;
   className?: string;
 }) {
+  useBtpbUiLanguage();
   const team = teamId ? bundle.teams.find((candidate) => candidate.id === teamId) : undefined;
-  const label = name ?? team?.name ?? 'Da definire';
+  const label = name ?? team?.name ?? btpbText("Da definire");
 
   return <span className={`team-label${className ? ` ${className}` : ''}`}>
     {team?.avatar_url && <img
