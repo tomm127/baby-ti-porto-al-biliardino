@@ -245,7 +245,7 @@ function LiveAdmin({ bundle, refresh, setError, onOpenFinishedMatches }: AdminPa
   const completedMatches = bundle.matches.filter((m) => ['finished','forfeit'].includes(m.status)).length;
   const activeTeams = bundle.teams.filter((t) => t.status === 'active').length;
   const completedGroups = bundle.groups.filter((group) => {
-    const matches = bundle.matches.filter((m) => m.group_id === group.id && m.status !== 'cancelled');
+    const matches = bundle.matches.filter((m) => m.group_id === group.id && m.stage === 'group');
     return matches.length > 0 && matches.every((m) => ['finished','forfeit'].includes(m.status));
   }).length;
 
@@ -356,7 +356,7 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused 
   const remaining = secondsRemaining(liveMatch);
   const t1=teamName(bundle,liveMatch.team1_id), t2=teamName(bundle,liveMatch.team2_id);
 
-  function cancel(){ if(window.confirm(`Annullare ${t1} vs ${t2}?`)) void act(`cancel-${liveMatch.id}`,()=>adminCancelMatch(liveMatch.id)); }
+  function cancel(){ if(window.confirm(liveMatch.stage === 'group' ? btpbText("Annullare questa partita? Il girone non potrà concludersi finché non inserirai un risultato.") : liveMatch.stage === 'third_place' ? btpbText("Annullare questa partita?") : btpbText("Annullare questa partita? Il tabellone non potrà avanzare da questa partita senza un risultato."))) void act(`cancel-${liveMatch.id}`,()=>adminCancelMatch(liveMatch.id)); }
   function forfeit(loserId:string|null, loserName:string){ if(loserId && window.confirm(`${btpbText("Sconfitta a tavolino per ")}${loserName}${btpbText("? Il risultato sarà ")}${liveMatch.goal_target ?? 1}-0.`)) void act(`forfeit-${liveMatch.id}`,()=>adminForfeitMatch(liveMatch.id,loserId)); }
   function saveResult() {
     const a=Number(score1), b=Number(score2);
@@ -836,7 +836,7 @@ function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchR
       {!fullyClosed && <div className="admin-match-inline-actions">
         {['queued','called','ready','playing','awaiting_result'].includes(m.status) && <select defaultValue="" disabled={busy || freeFields.length===0} onChange={(e)=>{const id=e.currentTarget.value;e.currentTarget.value='';if(id)void run(()=>adminAssignMatchField(m.id,id));}}><option value="">{btpbText("Assegna campo…")}</option>{freeFields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select>}
         {!['scheduled'].includes(m.status) && <button disabled={busy} onClick={()=>void run(()=>adminPostponeMatch(m.id))}>{btpbText("Rimanda")}</button>}
-        <button className="danger-soft" disabled={busy} onClick={()=>{if(window.confirm(btpbText("Annullare questa partita?")))void run(()=>adminCancelMatch(m.id));}}>{btpbText("Annulla")}</button>
+        <button className="danger-soft" disabled={busy} onClick={()=>{if(window.confirm(m.stage === 'group' ? btpbText("Annullare questa partita? Il girone non potrà concludersi finché non inserirai un risultato.") : m.stage === 'third_place' ? btpbText("Annullare questa partita?") : btpbText("Annullare questa partita? Il tabellone non potrà avanzare da questa partita senza un risultato.")))void run(()=>adminCancelMatch(m.id));}}>{btpbText("Annulla")}</button>
       </div>}
     </div>
   </div>;

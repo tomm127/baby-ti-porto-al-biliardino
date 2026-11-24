@@ -188,6 +188,8 @@ const english: Record<string, string> = {
   "Punteggio non valido.": "Invalid score.",
   "Correggi": "Correct",
   "Annullare questa partita?": "Cancel this match?",
+  "Annullare questa partita? Il girone non potrà concludersi finché non inserirai un risultato.": "Cancel this match? The group cannot finish until you enter a result.",
+  "Annullare questa partita? Il tabellone non potrà avanzare da questa partita senza un risultato.": "Cancel this match? The bracket cannot advance from this match without a result.",
   "Nome nuovo campo": "New table name",
   "ATTIVO": "ACTIVE",
   "Il nome del torneo non può essere vuoto.": "The tournament name cannot be empty.",
