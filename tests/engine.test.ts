@@ -102,7 +102,7 @@ test('12 qualifiers in a 16-slot bracket give top 4 seeds a bye', () => {
   assert.deepEqual(realPairings, [[8,9],[5,12],[7,10],[6,11]]);
 });
 
-test('field assignment never skips the queue', () => {
+test('field assignment preserves queue order when all teams are free', () => {
   const queue = [
     { id:'M1', team1Id:'A', team2Id:'B', queuePosition:1 },
     { id:'M2', team1Id:'C', team2Id:'D', queuePosition:2 },

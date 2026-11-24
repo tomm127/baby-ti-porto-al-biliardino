@@ -31,20 +31,35 @@ export function buildGroupQueue(
   return result;
 }
 
-/** Assign strictly from queue head to free fields; never reorders for rest/fairness. */
+/**
+ * Mirror migration 011: choose the first eligible match for each free field.
+ * Supply teams from all called/ready/playing/awaiting_result matches as busyTeamIds.
+ * Fields must be active; skipped matches keep their original queue positions.
+ */
 export function assignNextMatchesToFields(
   queue: QueuedMatch[],
   fields: Field[],
+  busyTeamIds: Iterable<string> = [],
 ): FieldAssignment[] {
   const orderedQueue = [...queue].sort((a, b) => a.queuePosition - b.queuePosition);
   const freeFields = fields
     .filter((field) => !field.occupied)
     .sort((a, b) => a.sortOrder - b.sortOrder);
+  const busy = new Set(busyTeamIds);
+  const assigned = new Set<string>();
+  const result: FieldAssignment[] = [];
 
-  return freeFields.slice(0, orderedQueue.length).map((field, index) => ({
-    fieldId: field.id,
-    matchId: orderedQueue[index].id,
-  }));
+  for (const field of freeFields) {
+    const match = orderedQueue.find((m) =>
+      !assigned.has(m.id) && !busy.has(m.team1Id) && !busy.has(m.team2Id)
+    );
+    if (!match) break;
+    result.push({ fieldId: field.id, matchId: match.id });
+    assigned.add(match.id);
+    busy.add(match.team1Id);
+    busy.add(match.team2Id);
+  }
+  return result;
 }
 
 /** Number of queued matches before the team's next match. Returns null if no future group match exists. */
