@@ -4295,3 +4295,115 @@ img {
 }
 
 /* BTPB STABILITY VISUAL AUDIT V1 END */
+/* BTPB MATCH RESPONSIVE V1 START */
+/* Keep the match screen within the usable viewport, including iOS safe areas. */
+.match-screen {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+.match-screen .match-top {
+  min-width: 0;
+  padding-top: max(13px, env(safe-area-inset-top));
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+}
+.match-screen .match-top .icon-button { flex: 0 0 42px; }
+.match-screen .match-top > div { min-width: 0; overflow-wrap: anywhere; }
+.match-screen .match-stage {
+  width: min(760px, 100%);
+  min-width: 0;
+  flex: 1 0 auto;
+  padding-left: max(12px, env(safe-area-inset-left));
+  padding-right: max(12px, env(safe-area-inset-right));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  container-type: inline-size;
+}
+.match-screen .match-stage > * { min-width: 0; max-width: 100%; }
+.match-screen .match-team-names {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 12px 9px;
+  font-size: clamp(18px, 5.5vw, 32px);
+}
+.match-screen .match-team-names > strong,
+.match-screen .score-inputs .team-label {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.match-screen .match-team-names .team-label,
+.match-screen .score-inputs .team-label { flex-wrap: wrap; justify-content: center; }
+.match-screen .team-label-text { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+/* SVG viewBox scales the entire clock, not just its font, so all digits fit. */
+.match-screen .match-clock {
+  margin: clamp(16px, 5vh, 38px) 0 12px;
+  width: 100%;
+  line-height: 1.05;
+  letter-spacing: normal;
+}
+.match-screen .match-clock--time { font-size: inherit; }
+.match-screen .match-clock--time svg { display: block; width: 100%; max-width: 640px; height: auto; margin: auto; overflow: visible; }
+.match-screen .match-clock--time text { fill: currentColor; font-weight: 950; font-variant-numeric: tabular-nums; }
+.match-screen .match-clock--untimed {
+  font-size: clamp(32px, 11vw, 82px);
+  overflow-wrap: anywhere;
+}
+.match-screen .countdown { min-height: clamp(150px, 36vh, 300px); width: 100%; }
+.match-screen .countdown span { font-size: clamp(96px, 43vw, 250px); line-height: .95; letter-spacing: 0; }
+.match-screen .countdown small { margin-top: 8px; text-align: center; overflow-wrap: anywhere; }
+.match-screen .waiting-title { margin: clamp(18px, 5vh, 48px) 0 18px; overflow-wrap: anywhere; }
+.match-screen .score-entry { grid-template-columns: minmax(0, 1fr); margin-top: clamp(18px, 5vh, 32px); gap: 14px; }
+.match-screen .score-entry > .eyebrow { margin: 0 0 6px; font-size: clamp(22px, 6vw, 34px) !important; line-height: 1.1; overflow-wrap: anywhere; }
+.match-screen .score-entry p { margin: 0; overflow-wrap: anywhere; }
+.match-screen .score-inputs { grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap: 8px; align-items: end; }
+.match-screen .score-inputs label { grid-template-columns: minmax(0,1fr); min-width: 0; gap: 6px; }
+.match-screen .score-inputs label > span { min-width: 0; min-height: 0; overflow-wrap: anywhere; font-size: clamp(15px, 4vw, 22px); }
+.match-screen .score-inputs input {
+  box-sizing: border-box;
+  width: 100%; min-width: 0; max-width: 100%;
+  min-height: 66px;
+  padding: 9px 3px;
+  font-size: clamp(30px, 10vw, 56px) !important;
+  appearance: textfield;
+  -webkit-appearance: none;
+}
+.match-screen .score-inputs input::-webkit-inner-spin-button,
+.match-screen .score-inputs input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.match-screen .score-inputs > strong { font-size: clamp(20px, 6vw, 38px); padding-bottom: 15px; }
+.match-screen .score-entry > .giant-button { margin-top: 4px; min-height: 52px; }
+.match-screen .match-controls { margin-top: 16px; }
+.match-screen .match-controls button,
+.match-screen .giant-button,
+.match-screen .finished-result button,
+.match-screen .confirm-result button {
+  min-width: 0; max-width: 100%; min-height: 48px;
+  padding: 12px 10px; white-space: normal; overflow-wrap: anywhere;
+}
+.match-screen .confirm-result { grid-template-columns: minmax(0,1fr); padding: 13px; overflow-wrap: anywhere; }
+.match-screen .confirm-result > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.match-screen .finished-result { grid-template-columns: minmax(0,1fr); margin-top: clamp(18px, 5vh, 40px); gap: 14px; }
+.match-screen .finished-result > div:nth-child(2) { font-size: clamp(34px, 15vw, 100px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; letter-spacing: -.04em; }
+.match-screen .match-error { overflow-wrap: anywhere; }
+.match-screen .match-end-flash {
+  box-sizing: border-box;
+  grid-template-columns: minmax(0,1fr);
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  overflow-y: auto;
+  gap: 10px;
+}
+.match-screen .match-end-flash > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+.match-screen .match-end-flash strong { font-size: clamp(38px, 13vw, 100px) !important; line-height: .98; padding: 0; }
+.match-screen .match-end-flash span { font-size: clamp(13px, 4vw, 23px) !important; padding: 8px 10px; }
+.match-screen .match-end-flash small { margin-top: 8px; padding: 8px 10px; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .match-screen .match-stage { justify-content: flex-start; padding-top: 10px; }
+  .match-screen .match-clock--time svg { max-width: 380px; }
+  .match-screen .countdown { min-height: 130px; }
+  .match-screen .countdown span { font-size: 120px; }
+  .match-screen .match-end-flash strong { font-size: clamp(34px, 12vh, 64px) !important; }
+}
+/* BTPB MATCH RESPONSIVE V1 END */
+
