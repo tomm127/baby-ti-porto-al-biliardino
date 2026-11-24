@@ -1,0 +1,11 @@
+.history-editions { display: grid; gap: 20px; }
+.history-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.history-podium .history-portrait { aspect-ratio: 4 / 3; display: grid; place-items: center; background: #eae5d9; overflow: hidden; }
+.history-podium.rank-1 { border-color: #ceb57b; }
+.history-podium.rank-1 .history-portrait { background: #f1e3bd; }
+.history-podium .history-portrait img { width: 100%; height: 100%; object-fit: cover; min-height: 0; }
+.history-podium .history-portrait span { font-size: 44px; letter-spacing: 0; }
+.history-final-score { margin: 16px 0 0; color: #68727a; font-size: 13px; }
+.history-final-score strong { color: #18283a; font-size: 20px; font-variant-numeric: tabular-nums; }
+.history-podium h3 { overflow-wrap: anywhere; }
+@media (max-width: 680px) { .history-podium .history-portrait { aspect-ratio: 1; min-height: 100px; } }
