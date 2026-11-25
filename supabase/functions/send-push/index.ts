@@ -1,9 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.112.4';
 import webpush from 'npm:web-push@3.6.7';
+import { validatedPushEndpoint } from './endpoint.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 type PushJob = {
@@ -45,6 +47,9 @@ function getPublishableKey() {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405, headers: { ...corsHeaders, Allow: 'POST, OPTIONS', 'Content-Type': 'application/json' },
+  });
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -128,10 +133,15 @@ Deno.serve(async (req) => {
       const errors: string[] = [];
 
       for (const subscription of subscriptions) {
+        const endpoint = validatedPushEndpoint(subscription.endpoint);
+        if (!endpoint) {
+          errors.push('Unsupported push endpoint');
+          continue;
+        }
         try {
           await webpush.sendNotification(
             {
-              endpoint: subscription.endpoint,
+              endpoint,
               keys: { p256dh: subscription.p256dh, auth: subscription.auth_key },
             },
             payload,
