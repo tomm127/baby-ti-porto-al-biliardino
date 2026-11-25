@@ -1,3 +1,4 @@
+import { parseMatchScore } from '../domain/score.ts';
 import { btpbText, useBtpbUiLanguage, btpbError, btpbStateLabel } from '../lib/btpbUiText.ts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -356,8 +357,8 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused 
   function cancel(){ if(window.confirm(liveMatch.stage === 'group' ? btpbText("Annullare questa partita? Il girone non potrà concludersi finché non inserirai un risultato.") : liveMatch.stage === 'third_place' ? btpbText("Annullare questa partita?") : btpbText("Annullare questa partita? Il tabellone non potrà avanzare da questa partita senza un risultato."))) void act(`cancel-${liveMatch.id}`,()=>adminCancelMatch(liveMatch.id)); }
   function forfeit(loserId:string|null, loserName:string){ if(loserId && window.confirm(`${btpbText("Sconfitta a tavolino per ")}${loserName}${btpbText("? Il risultato sarà ")}${liveMatch.goal_target ?? 1}-0.`)) void act(`forfeit-${liveMatch.id}`,()=>adminForfeitMatch(liveMatch.id,loserId)); }
   function saveResult() {
-    const a=Number(score1), b=Number(score2);
-    if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0) return;
+    const a=parseMatchScore(score1), b=parseMatchScore(score2);
+    if(a===null||b===null) return;
     void act(`score-${liveMatch.id}`,()=>submitMatchResult(liveMatch.id,a,b));
   }
 
@@ -377,7 +378,7 @@ function AdminFieldCard({ fieldName, match, bundle, busy, act, tournamentPaused 
 
     {liveMatch.status === 'awaiting_result' && <div className="admin-field-result">
       <span>{btpbText("Inserisci risultato")}</span>
-      <div><input type="number" min="0" value={score1} onChange={(e)=>setScore1(e.target.value)}/><strong>–</strong><input type="number" min="0" value={score2} onChange={(e)=>setScore2(e.target.value)}/><button disabled={busy===`score-${liveMatch.id}` || score1==='' || score2===''} onClick={saveResult}>{btpbText("Salva")}</button></div>
+      <div><input type="number" min="0" value={score1} onChange={(e)=>setScore1(e.target.value)}/><strong>–</strong><input type="number" min="0" value={score2} onChange={(e)=>setScore2(e.target.value)}/><button disabled={busy===`score-${liveMatch.id}` || parseMatchScore(score1)===null || parseMatchScore(score2)===null} onClick={saveResult}>{btpbText("Salva")}</button></div>
     </div>}
 
     {!['finished','forfeit','cancelled'].includes(liveMatch.status) && <div className="forfeit-row"><span>{btpbText("Tavolino:")}</span><button onClick={()=>forfeit(liveMatch.team1_id,t1)}>{btpbText("perde ")}{t1}</button><button onClick={()=>forfeit(liveMatch.team2_id,t2)}>{btpbText("perde ")}{t2}</button></div>}
@@ -817,8 +818,8 @@ function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchR
     try{await fn();await refresh();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
   }
   async function save() {
-    const a=Number(s1), b=Number(s2);
-    if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0){setError('Punteggio non valido.');return;}
+    const a=parseMatchScore(s1), b=parseMatchScore(s2);
+    if(a===null||b===null){setError('Punteggio non valido.');return;}
     await run(()=>adminSetMatchResult(m.id,a,b));
   }
 
@@ -829,7 +830,7 @@ function AdminMatchRow({ m, bundle, refresh, setError, freeFields }: { m: MatchR
     </div>
 
     <div className="admin-match-actions-v2">
-      <div className="score-mini"><input type="number" min="0" value={s1} disabled={busy} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} disabled={busy} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || !m.team1_id || !m.team2_id || s1.trim()==='' || s2.trim()===''} onClick={()=>void save()}>{closed?btpbText("Correggi"):btpbText("Salva")}</button></div>
+      <div className="score-mini"><input type="number" min="0" value={s1} disabled={busy} onChange={(e)=>setS1(e.target.value)}/><span>–</span><input type="number" min="0" value={s2} disabled={busy} onChange={(e)=>setS2(e.target.value)}/><button disabled={busy || !m.team1_id || !m.team2_id || parseMatchScore(s1)===null || parseMatchScore(s2)===null} onClick={()=>void save()}>{closed?btpbText("Correggi"):btpbText("Salva")}</button></div>
       {!fullyClosed && <div className="admin-match-inline-actions">
         {['queued','called','ready','playing','awaiting_result'].includes(m.status) && <select defaultValue="" disabled={busy || freeFields.length===0} onChange={(e)=>{const id=e.currentTarget.value;e.currentTarget.value='';if(id)void run(()=>adminAssignMatchField(m.id,id));}}><option value="">{btpbText("Assegna campo…")}</option>{freeFields.map((field)=><option value={field.id} key={field.id}>{field.name}</option>)}</select>}
         {!['scheduled'].includes(m.status) && <button disabled={busy} onClick={()=>void run(()=>adminPostponeMatch(m.id))}>{btpbText("Rimanda")}</button>}
